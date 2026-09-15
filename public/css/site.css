@@ -1,0 +1,118 @@
+/* ==========================================================================
+   দৈনিক মহালছড়ি নিউজ — কাস্টম স্টাইল
+   legacy-demo/index.html থেকে হুবহু সংরক্ষিত (ডিজাইন পরিবর্তন করা হয়নি)
+   ========================================================================== */
+body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+.dark ::-webkit-scrollbar-track { background: #1f2937; }
+::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+.ticker-wrap { overflow: hidden; white-space: nowrap; box-sizing: border-box; }
+.ticker { display: inline-block; animation: ticker 25s linear infinite; }
+.ticker:hover { animation-play-state: paused; }
+@keyframes ticker { 0% { transform: translate3d(100%,0,0); } 100% { transform: translate3d(-100%,0,0); } }
+
+.hide-scrollbar::-webkit-scrollbar { height: 0; width: 0; display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.mc-icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem; border-radius: .85rem;
+  color: #0B0B0B; background: #F3F4F6; border: 1px solid #E5E7EB;
+  transition: transform .18s ease, background .18s ease, color .18s ease, border-color .18s ease; }
+.mc-icon-btn:hover { background: #D50E18; border-color: #D50E18; color: #fff; transform: translateY(-1px); }
+.mc-icon-btn:active { transform: translateY(0) scale(.96); }
+.dark .mc-icon-btn { background: #182233; border-color: #263246; color: #F1F5F9; }
+.dark .mc-icon-btn:hover { background: #E21D2B; border-color: #E21D2B; color: #fff; }
+
+/* Dark Mode High-Contrast Exact Palette */
+html.dark, html.dark body { background-color: #0D1422 !important; color: #F1F5F9 !important; }
+.dark .dark\:bg-gray-900, .dark .dark\:bg-gray-950 { background-color: #0D1422 !important; }
+.dark .dark\:bg-gray-800 { background-color: #182233 !important; }
+.dark .dark\:border-gray-700, .dark .dark\:border-gray-800 { border-color: #263246 !important; }
+.dark .dark\:text-gray-100, .dark .dark\:text-gray-200, .dark .dark\:text-white { color: #F1F5F9 !important; }
+.dark .dark\:text-gray-300, .dark .dark\:text-gray-400, .dark .dark\:text-gray-500 { color: #94A3B8 !important; }
+
+.mc-chip { border: 1px solid #E5E7EB; background: #fff; color: #374151; font-size: 12px; font-weight: 600; padding: .25rem .7rem; border-radius: 999px; transition: all .16s ease; }
+.mc-chip:hover { background: #D50E18; border-color: #D50E18; color: #fff; }
+.dark .mc-chip { background: #111827; border-color: #374151; color: #D1D5DB; }
+
+@keyframes mcDrop { from { opacity:0; transform: translateY(-16px);} to { opacity:1; transform:none;} }
+.mc-drop { animation: mcDrop .22s cubic-bezier(.22,.61,.36,1); }
+@keyframes mcSlideRight { from { transform: translateX(100%);} to { transform:none;} }
+.mc-slide-right { animation: mcSlideRight .3s cubic-bezier(.22,.61,.36,1); }
+@keyframes fadeUp { from { opacity:0; transform: translateY(12px);} to { opacity:1; transform:none;} }
+.animate-fade-in-up { animation: fadeUp .26s ease-out; }
+
+.mc-scroll { scrollbar-width: thin; }
+.pb-safe { padding-bottom: calc(.55rem + env(safe-area-inset-bottom)); }
+
+/* ===== মোবাইল বটম নেভিগেশন (হোম / সর্বশেষ / ভিডিও / ঘোষণা) ===== */
+.mc-bottomnav { position: fixed; left:0; right:0; bottom:0; width:100%; z-index:50;
+  background:#fff; border-top:1px solid #ECEEEC; box-shadow:0 -8px 24px rgba(11,11,11,.08);
+  padding-bottom: env(safe-area-inset-bottom); overflow-x:hidden; }
+.dark .mc-bottomnav { background:#0D1422; border-top-color:#263246; box-shadow:0 -8px 24px rgba(0,0,0,.55); }
+.mc-bottomnav ul { display:grid; grid-template-columns: repeat(4,1fr); width:100%; margin:0; padding:0; list-style:none; }
+.mc-bottomnav li { min-width:0; }
+.mc-bottomnav a, .mc-bottomnav button { position:relative; -webkit-appearance:none; appearance:none; border:0; background:transparent; text-decoration:none;
+  width:100%; height:66px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+  color:#5B6B62; cursor:pointer; -webkit-tap-highlight-color:transparent; transition: color .18s ease, transform .12s ease; }
+.dark .mc-bottomnav a, .dark .mc-bottomnav button { color:#94A3B8; }
+.mc-bottomnav .mc-bn-ico { display:block; font-size:21px; line-height:1; transition: transform .18s ease; }
+.mc-bottomnav .mc-bn-txt { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:600; line-height:1.15; }
+.mc-bottomnav a:active, .mc-bottomnav button:active { transform: scale(.95); }
+.mc-bottomnav a.is-active, .mc-bottomnav button.is-active { color:#E21D2B; }
+.mc-bottomnav a.is-active .mc-bn-ico, .mc-bottomnav button.is-active .mc-bn-ico { transform: translateY(-1px) scale(1.08); }
+.mc-bottomnav a.is-active::after, .mc-bottomnav button.is-active::after { content:""; position:absolute; top:0; left:50%; transform:translateX(-50%); width:26px; height:3px; border-radius:0 0 4px 4px; background:#E21D2B; }
+@media (max-width:360px){ .mc-bottomnav .mc-bn-txt { font-size:10px; } }
+
+.mc-body-pad { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom)); }
+@media (min-width:768px){ .mc-body-pad { padding-bottom:0; } }
+
+#home, #latest-news, #comments { scroll-margin-top: 116px; }
+
+/* --- নিউজ পেজের বডি টাইপোগ্রাফি --- */
+.article-body > p { margin: 0 0 1.15em; }
+.article-body h2 { font-family:'Noto Serif Bengali',serif; font-weight:700; font-size:1.45rem; line-height:1.5; margin:1.6em 0 .6em; color:#111827; }
+.article-body h3 { font-family:'Noto Serif Bengali',serif; font-weight:700; font-size:1.2rem; margin:1.4em 0 .5em; color:#111827; }
+.article-body blockquote { border-right:4px solid #E21D2B; background:#F3F4F1; padding:.9rem 1.1rem; margin:1.4em 0; font-family:'Noto Serif Bengali',serif; font-size:1.05rem; font-weight:600; color:#1F2937; border-radius:.5rem 0 0 .5rem; }
+.article-body ul { list-style:disc; padding-right:1.5em; margin:0 0 1.15em; }
+.article-body ol { list-style:decimal; padding-right:1.5em; margin:0 0 1.15em; }
+.article-body img { border-radius:.5rem; margin:1.2em 0; max-width:100%; height:auto; }
+.article-body figure { margin:1.4em 0; }
+.article-body figcaption { font-size:.78rem; color:#6B7280; margin-top:.4rem; }
+.article-body table { width:100%; border-collapse:collapse; margin:1.4em 0; font-size:.92rem; }
+.article-body th, .article-body td { border:1px solid #E5E7EB; padding:.55rem .7rem; text-align:right; }
+.article-body th { background:#F3F4F1; font-weight:700; }
+.article-body a { color:#D50E18; text-decoration:underline; }
+.dark .article-body h2, .dark .article-body h3 { color:#fff; }
+.dark .article-body blockquote { background:#1F2937; color:#E5E7EB; }
+.dark .article-body th, .dark .article-body td { border-color:#374151; }
+.dark .article-body th { background:#111827; }
+.dark .article-body figcaption { color:#9CA3AF; }
+@media (min-width:768px){ .article-body > p { font-size:1.08rem; } }
+
+html.mc-lock, body.mc-lock { overflow:hidden; }
+
+/* লাইন ক্ল্যাম্প */
+.line-clamp-1 { display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+.line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* অ্যাডমিন — ছোট স্ক্রলে সাইডবার */
+@media (max-width:1023px){
+  .mc-admin-shell aside { transform: translateX(100%); transition: transform .25s ease; }
+  .mc-admin-shell.nav-open aside { transform:none; }
+  .mc-admin-shell > div { margin-right:0 !important; }
+}
+
+/* ফ্ল্যাশ মেসেজ অটো-হাইড */
+.mc-toast { animation: fadeUp .26s ease-out; }
+
+/* প্রিন্ট */
+@media print {
+  header, footer, .mc-bottomnav, aside, #mc-search-overlay, #mc-menu-drawer { display:none !important; }
+  .mc-body-pad { padding-bottom:0; }
+  body { background:#fff; color:#000; }
+}

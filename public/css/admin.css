@@ -1,0 +1,22 @@
+body{font-family:'Hind Siliguri','Inter',sans-serif}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}.dark ::-webkit-scrollbar-thumb{background:#334155}
+.mc-scroll{scrollbar-width:thin}
+@media(max-width:1023px){.mc-admin-shell aside{transform:translateX(100%);transition:transform .25s ease}.mc-admin-shell.nav-open aside{transform:none}.mc-admin-shell>div{margin-right:0!important}}
+[class*="mc-status-"]{display:inline-block;border-radius:999px;padding:.1rem .5rem;font-size:10px;font-weight:800}
+.mc-status-published{background:#d1fae5;color:#065f46}.mc-status-draft{background:#e2e8f0;color:#334155}
+.mc-status-pending{background:#fef3c7;color:#92400e}.mc-status-scheduled{background:#dbeafe;color:#1e40af}
+.mc-status-archived{background:#ede9fe;color:#5b21b6}.mc-status-trash,.mc-status-rejected,.mc-status-spam{background:#fee2e2;color:#991b1b}
+.mc-status-approved{background:#d1fae5;color:#065f46}
+.dark .mc-status-published{background:#064e3b;color:#6ee7b7}.dark .mc-status-draft{background:#334155;color:#cbd5e1}
+.dark .mc-status-pending{background:#78350f;color:#fcd34d}.dark .mc-status-scheduled{background:#1e3a8a;color:#93c5fd}
+.dark .mc-status-archived{background:#4c1d95;color:#c4b5fd}.dark .mc-status-trash,.dark .mc-status-rejected,.dark .mc-status-spam{background:#7f1d1d;color:#fca5a5}
+.dark .mc-status-approved{background:#064e3b;color:#6ee7b7}
+.mc-input{width:100%;padding:.5rem .75rem;border-radius:.5rem;border:1px solid #cbd5e1;background:#fff;font-size:.875rem}
+.mc-input:focus{outline:none;border-color:#E21D2B;box-shadow:0 0 0 3px rgba(226,29,43,.15)}
+.dark .mc-input{background:#0B1120;border-color:#334155;color:#f1f5f9}
+.mc-label{display:block;margin-bottom:.25rem;font-size:.75rem;font-weight:700;color:#334155}.dark .mc-label{color:#cbd5e1}
+.mc-btn{padding:.5rem 1rem;border-radius:.5rem;font-size:.8125rem;font-weight:700}
+.mc-btn-primary{background:#E21D2B;color:#fff}.mc-btn-primary:hover{background:#B9121E}
+.mc-btn-ghost{background:#f1f5f9;color:#334155}.dark .mc-btn-ghost{background:#1e293b;color:#cbd5e1}
+.mc-card{border:1px solid #e2e8f0;background:#fff;border-radius:.75rem}.dark .mc-card{border-color:#1e293b;background:#0F172A}
