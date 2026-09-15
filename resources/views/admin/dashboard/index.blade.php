@@ -54,7 +54,7 @@ $cards = [
         <div class="space-y-2">
             @forelse($recentNews as $p)
                 <div class="flex items-center gap-3 rounded-lg p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    @if($p->featured_image)<img src="{{ str_starts_with($p->featured_image,'http') ? $p->featured_image : asset('uploads/'.$p->featured_image) }}" class="h-11 w-16 shrink-0 rounded object-cover" alt="">@else<span class="flex h-11 w-16 shrink-0 items-center justify-center rounded bg-slate-100 dark:bg-slate-800"><i class="ph ph-image text-slate-400"></i></span>@endif
+                    @if($p->featured_image)<img src="{{ str_starts_with($p->featured_image,'http') ? $p->featured_image : mc_image($p->featured_image) }}" class="h-11 w-16 shrink-0 rounded object-cover" alt="">@else<span class="flex h-11 w-16 shrink-0 items-center justify-center rounded bg-slate-100 dark:bg-slate-800"><i class="ph ph-image text-slate-400"></i></span>@endif
                     <div class="min-w-0 flex-1">
                         <a href="{{ route('admin.news.edit',$p) }}" class="line-clamp-1 text-[13px] font-bold text-slate-800 hover:text-[#E21D2B] dark:text-slate-200">{{ $p->title }}</a>
                         <p class="mt-0.5 flex items-center gap-2 text-[10px] text-slate-500">

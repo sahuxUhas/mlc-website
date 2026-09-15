@@ -22,6 +22,6 @@ class Epaper extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('uploads/'.ltrim($this->file_path, '/'));
+        return mc_image($this->file_path);
     }
 }

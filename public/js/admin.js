@@ -2,6 +2,57 @@
 (function(){var t=null;try{t=localStorage.getItem('mc_admin_theme')}catch(e){}
 if(t==='dark')root.classList.add('dark');else if(t==='light')root.classList.remove('dark');
 else if(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)root.classList.add('dark')})();
+/* ===== মোডাল (Create/Edit ফর্ম) ===== */
+function mcOpenModal(id){var m=document.getElementById(id);if(m){m.classList.remove('hidden');m.classList.add('flex');document.documentElement.classList.add('mc-lock')}}
+function mcCloseModal(id){var m=document.getElementById(id);if(m){m.classList.add('hidden');m.classList.remove('flex');document.documentElement.classList.remove('mc-lock')}}
+document.addEventListener('click',function(e){
+ var op=e.target.closest('[data-mc-modal-open]');
+ if(op){mcOpenModal(op.getAttribute('data-mc-modal-open'));return}
+ var cl=e.target.closest('[data-mc-modal-close]');
+ if(cl){mcCloseModal(cl.getAttribute('data-mc-modal-close'));return}
+ var bg=e.target.closest('[data-mc-modal]');
+ if(bg&&e.target===bg){mcCloseModal(bg.getAttribute('data-mc-modal'));return}
+});
+document.addEventListener('keydown',function(e){
+ if(e.key==='Escape'){document.querySelectorAll('[data-mc-modal]').forEach(function(m){if(!m.classList.contains('hidden'))mcCloseModal(m.getAttribute('data-mc-modal'))})}
+});
+
+/* ===== ট্যাব প্যানেল (সেটিংস/SEO গ্রুপ) ===== */
+document.addEventListener('click',function(e){
+ var t=e.target.closest('[data-mc-tab]');
+ if(!t)return;
+ var group=t.getAttribute('data-mc-tab-group'),key=t.getAttribute('data-mc-tab');
+ document.querySelectorAll('[data-mc-tab-group="'+group+'"]').forEach(function(b){b.classList.remove('bg-[#E21D2B]','text-white');b.classList.add('bg-slate-100','text-slate-600')});
+ t.classList.add('bg-[#E21D2B]','text-white');t.classList.remove('bg-slate-100','text-slate-600');
+ document.querySelectorAll('[data-mc-pane-group="'+group+'"]').forEach(function(p){p.classList.toggle('hidden',p.getAttribute('data-mc-pane-group-key')!==key)});
+});
+
+/* ===== টেবিলের সব চেকবক্স একসাথে ===== */
+document.addEventListener('change',function(e){
+ if(e.target.id==='checkAll'||e.target.matches('[data-check-all]')){
+  var scope=e.target.getAttribute('data-check-all')||'.bulk-check';
+  document.querySelectorAll(scope).forEach(function(c){c.checked=e.target.checked});
+ }
+});
+
+/* ===== রিঅর্ডার: উপরে/নিচে সরানো + hidden order ইনপুট আপডেট ===== */
+document.addEventListener('click',function(e){
+ var btn=e.target.closest('[data-move]');
+ if(!btn)return;
+ var item=btn.closest('[data-sortable-item]');
+ var list=item&&item.parentElement;
+ if(!item||!list)return;
+ if(btn.getAttribute('data-move')==='up'&&item.previousElementSibling)list.insertBefore(item,item.previousElementSibling);
+ if(btn.getAttribute('data-move')==='down'&&item.nextElementSibling)list.insertBefore(item.nextElementSibling,item);
+ mcSyncOrder(list);
+});
+function mcSyncOrder(list){
+ var ids=[];
+ list.querySelectorAll('[data-sortable-item]').forEach(function(it){ids.push(it.getAttribute('data-sortable-id'))});
+ var input=document.querySelector('[data-order-input]');
+ if(input)input.value=ids.join(',');
+}
+
 document.addEventListener('click',function(e){
  if(e.target.closest('#adminThemeToggle')){var d=root.classList.toggle('dark');try{localStorage.setItem('mc_admin_theme',d?'dark':'light')}catch(x){}}
  if(e.target.closest('#openSidebar'))document.getElementById('adminShell').classList.add('nav-open');

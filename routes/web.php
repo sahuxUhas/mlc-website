@@ -83,9 +83,6 @@ Route::middleware(['mc.publish'])->group(function () {
     Route::get('/advertise', [PublicSite\PageController::class, 'advertise'])->name('advertise');
     Route::get('/submit-report', [PublicSite\PageController::class, 'submitReport'])->name('submit-report');
 
-    // ডাইনামিক স্ট্যাটিক পেজ (সবশেষে — যাতে অন্য রাউট ঢাকা না পড়ে)
-    Route::get('/{slug}', [PublicSite\PageController::class, 'show'])
-        ->where('slug', '[A-Za-z0-9\-_\x{0980}-\x{09FF}]+')->name('page.show');
 });
 
 /*
@@ -124,6 +121,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('news/{post}/status/{status}', [Admin\NewsController::class, 'changeStatus'])->name('news.status');
             Route::post('news/bulk', [Admin\NewsController::class, 'bulk'])->name('news.bulk');
             Route::post('news/{post}/images/reorder', [Admin\NewsController::class, 'reorderImages'])->name('news.images.reorder');
+            Route::post('news/{post}/featured', [Admin\NewsController::class, 'setFeaturedImage'])->name('news.featured');
+            Route::post('news/{post}/images', [Admin\NewsController::class, 'addImages'])->name('news.images.store');
             Route::delete('news/{post}/images/{image}', [Admin\NewsController::class, 'destroyImage'])->name('news.images.destroy');
         });
         Route::delete('news/{post}', [Admin\NewsController::class, 'destroy'])
@@ -287,3 +286,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('newsletter/{subscriber}', [Admin\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| ডাইনামিক স্ট্যাটিক পেজ — ফাইলের একদম শেষে রাখা হয়েছে
+| যাতে /admin, /news, /videos প্রভৃতি রাউট কখনো ঢাকা না পড়ে।
+| সংরক্ষিত শব্দগুলো বাদ দেওয়া হয়েছে।
+|--------------------------------------------------------------------------
+*/
+Route::get('/{slug}', [PublicSite\PageController::class, 'show'])
+    ->where('slug', '(?!admin|login|logout|up|storage|telescope|horizon)[A-Za-z0-9\-_\x{0980}-\x{09FF}]+')
+    ->name('page.show');

@@ -10,7 +10,7 @@
         @forelse($epapers as $epaper)
             <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-[#263246] dark:bg-[#182233]">
                 <div class="aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <img src="{{ $epaper->cover_image ? asset('uploads/'.$epaper->cover_image) : mc_placeholder_svg() }}" alt="{{ $epaper->title }}" loading="lazy" class="h-full w-full object-cover">
+                    <img src="{{ $epaper->cover_image ? mc_image($epaper->cover_image) : mc_placeholder_svg() }}" alt="{{ $epaper->title }}" loading="lazy" class="h-full w-full object-cover">
                 </div>
                 <div class="p-3">
                     <h2 class="line-clamp-1 font-serif text-sm font-bold text-gray-900 dark:text-[#F1F5F9]">{{ $epaper->title }}</h2>

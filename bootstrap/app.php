@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\SanitizeInput::class,
             \App\Http\Middleware\ShareSiteData::class,
+            \App\Http\Middleware\SecurityHeaders::class,
             \Illuminate\Session\Middleware\AuthenticateSession::class,
         ]);
 
@@ -28,15 +29,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'mc.publish'  => \App\Http\Middleware\PublishScheduledContent::class,
             'mc.trackview'=> \App\Http\Middleware\TrackPostView::class,
         ]);
-
-        // সিকিউরিটি হেডার সব রেসপন্সে যুক্ত করা
-        $middleware->after(function (Request $request, $response) {
-            if (method_exists($response, 'headers')) {
-                $response->headers->set('X-Content-Type-Options', 'nosniff');
-                $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-                $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-            }
-        });
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

@@ -10,7 +10,7 @@
         @forelse($albums as $album)
             <a href="{{ route('gallery.show', $album->slug) }}" class="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-[#263246] dark:bg-[#182233]">
                 <div class="relative aspect-video overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    <img src="{{ $album->cover_image ? asset('uploads/'.$album->cover_image) : ($album->photos->first() ? asset('uploads/'.$album->photos->first()->path) : mc_placeholder_svg()) }}" alt="{{ $album->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105">
+                    <img src="{{ $album->cover_image ? mc_image($album->cover_image) : ($album->photos->first() ? mc_image($album->photos->first()->path) : mc_placeholder_svg()) }}" alt="{{ $album->title }}" loading="lazy" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105">
                     <span class="absolute bottom-2 left-2 flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white"><i class="ph ph-images"></i> {{ bn_count($album->photos_count) }}টি ছবি</span>
                 </div>
                 <div class="p-4">

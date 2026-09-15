@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Media extends Model
 {
+    use HasFactory;
+
     use SoftDeletes;
 
     protected $table = 'media';
@@ -25,7 +28,7 @@ class Media extends Model
 
     public function getUrlAttribute(): string
     {
-        return asset('uploads/'.ltrim($this->path, '/'));
+        return mc_image($this->path);
     }
 
     public function getHumanSizeAttribute(): string

@@ -6,7 +6,7 @@
 @section('og_title', $post->og_title ?: $post->title)
 @section('og_description', $post->og_description ?: mc_excerpt($post->excerpt ?: $post->content, 240))
 @section('og_type', 'article')
-@section('og_image', $post->og_image ? asset('uploads/'.$post->og_image) : ($post->featured_image ? asset('uploads/'.$post->featured_image) : ''))
+@section('og_image', $post->og_image ? mc_image($post->og_image) : ($post->featured_image ? mc_image($post->featured_image) : ''))
 @section('canonical', $post->canonical_url ?: route('news.show', $post->slug))
 
 @push('head')
@@ -79,7 +79,7 @@
                         @if($post->reporter)
                             <a href="{{ route('reporters.show', $post->reporter->slug) }}" class="flex items-center gap-2 font-semibold text-gray-800 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:text-[#22C55E]">
                                 @if($post->reporter->photo)
-                                    <img src="{{ asset('uploads/'.$post->reporter->photo) }}" alt="{{ $post->reporter->name }}" class="h-8 w-8 rounded-full object-cover" loading="lazy">
+                                    <img src="{{ mc_image($post->reporter->photo) }}" alt="{{ $post->reporter->name }}" class="h-8 w-8 rounded-full object-cover" loading="lazy">
                                 @else
                                     <i class="ph-fill ph-user-circle text-2xl text-[#D50E18]"></i>
                                 @endif
@@ -109,7 +109,7 @@
             @if($post->featured_image)
                 <figure class="mb-6">
                     <div class="overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800">
-                        <img src="{{ asset('uploads/'.$post->featured_image) }}" alt="{{ $post->image_caption ?: $post->title }}" class="w-full object-cover" loading="eager" decoding="async"
+                        <img src="{{ mc_image($post->featured_image) }}" alt="{{ $post->image_caption ?: $post->title }}" class="w-full object-cover" loading="eager" decoding="async"
                              onerror="this.onerror=null;this.src='{{ mc_placeholder_svg() }}'">
                     </div>
                     @if($post->image_caption || $post->image_credit)
@@ -146,9 +146,9 @@
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                         @foreach($post->images as $image)
                             <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-                                <img src="{{ asset('uploads/'.$image->path) }}" alt="{{ $image->caption ?: $post->title }}" loading="lazy" decoding="async"
+                                <img src="{{ mc_image($image->path) }}" alt="{{ $image->caption ?: $post->title }}" loading="lazy" decoding="async"
                                      class="aspect-video w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105"
-                                     data-mc-lightbox="{{ asset('uploads/'.$image->path) }}">
+                                     data-mc-lightbox="{{ mc_image($image->path) }}">
                                 @if($image->caption)
                                     <figcaption class="px-2 py-1.5 text-[11px] text-gray-600 dark:text-[#94A3B8]">{{ $image->caption }}</figcaption>
                                 @endif
@@ -257,7 +257,7 @@
                     @foreach($latest as $item)
                         <li>
                             <a href="{{ route('news.show', $item->slug) }}" class="group flex items-start gap-3">
-                                <img src="{{ $item->featured_image ? asset('uploads/'.$item->featured_image) : mc_placeholder_svg() }}" alt="{{ $item->title }}" loading="lazy"
+                                <img src="{{ $item->featured_image ? mc_image($item->featured_image) : mc_placeholder_svg() }}" alt="{{ $item->title }}" loading="lazy"
                                      class="h-14 w-20 shrink-0 rounded-lg object-cover" onerror="this.onerror=null;this.src='{{ mc_placeholder_svg() }}'">
                                 <span class="min-w-0 flex-1">
                                     <span class="line-clamp-2 block text-[13px] font-bold leading-snug text-gray-800 group-hover:text-[#E21D2B] dark:text-[#F1F5F9] dark:group-hover:text-[#22C55E]">{{ $item->title }}</span>
@@ -282,7 +282,7 @@
                         @foreach($related as $item)
                             <li>
                                 <a href="{{ route('news.show', $item->slug) }}" class="group flex items-start gap-3">
-                                    <img src="{{ $item->featured_image ? asset('uploads/'.$item->featured_image) : mc_placeholder_svg() }}" alt="{{ $item->title }}" loading="lazy" class="h-14 w-20 shrink-0 rounded-lg object-cover">
+                                    <img src="{{ $item->featured_image ? mc_image($item->featured_image) : mc_placeholder_svg() }}" alt="{{ $item->title }}" loading="lazy" class="h-14 w-20 shrink-0 rounded-lg object-cover">
                                     <span class="line-clamp-3 text-[13px] font-bold leading-snug text-gray-800 group-hover:text-[#E21D2B] dark:text-[#F1F5F9] dark:group-hover:text-[#22C55E]">{{ $item->title }}</span>
                                 </a>
                             </li>

@@ -28,7 +28,12 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
             $table->index(['extension', 'created_at']);
+            // FULLTEXT ইনডেক্স শুধু MySQL/MariaDB এ সমর্থিত
+            // (SQLite এ RuntimeException এড়াতে ড্রাইভার যাচাই করা হয়েছে —
+            //  ফলে টেস্টিং ও লোকাল ডেভ দুটোতেই migration চলে)
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
             $table->fullText(['file_name', 'alt_text', 'caption']);
+            }
         });
 
         Schema::create('albums', function (Blueprint $table) {

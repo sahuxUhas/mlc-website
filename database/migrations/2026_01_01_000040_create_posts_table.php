@@ -54,7 +54,12 @@ return new class extends Migration
             $table->index(['status', 'published_at']);
             $table->index(['category_id', 'status', 'published_at']);
             $table->index(['is_breaking', 'published_at']);
+            // FULLTEXT ইনডেক্স শুধু MySQL/MariaDB এ সমর্থিত
+            // (SQLite এ RuntimeException এড়াতে ড্রাইভার যাচাই করা হয়েছে —
+            //  ফলে টেস্টিং ও লোকাল ডেভ দুটোতেই migration চলে)
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
             $table->fullText(['title', 'excerpt', 'content']);
+            }
         });
     }
 

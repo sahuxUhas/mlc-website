@@ -14,7 +14,7 @@
             <a href="{{ route('videos.show', $video->slug) }}" class="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-[#263246] dark:bg-[#182233]">
                 <div class="relative aspect-video overflow-hidden bg-gray-900">
                     @if($video->thumbnail)
-                        <img src="{{ asset('uploads/'.$video->thumbnail) }}" alt="{{ $video->title }}" loading="lazy" class="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105">
+                        <img src="{{ mc_image($video->thumbnail) }}" alt="{{ $video->title }}" loading="lazy" class="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105">
                     @else
                         <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#0B0B0B] to-[#1F7A3D]/40"></div>
                     @endif

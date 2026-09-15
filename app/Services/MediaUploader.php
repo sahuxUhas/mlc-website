@@ -6,6 +6,8 @@ use App\Models\Media;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\MessageBag;
+use Illuminate\Validation\ValidationException;
 
 /**
  * সিকিউর ফাইল আপলোড সার্ভিস — মিডিয়া লাইব্রেরি, নিউজ, গ্যালারি,
@@ -39,7 +41,7 @@ class MediaUploader
     /**
      * ফাইল যাচাই করে নিরাপদে সংরক্ষণ করে ও Media রেকর্ড তৈরি করে।
      *
-     * @throws \RuntimeException ভ্যালিডেশন ব্যর্থ হলে
+     * @throws ValidationException ভ্যালিডেশন ব্যর্থ হলে (ব্যবহারকারী-বান্ধব বার্তা)
      */
     public function store(UploadedFile $file, string $folder = 'general', array $allowed = self::IMAGE_MIMES): Media
     {
@@ -90,16 +92,16 @@ class MediaUploader
         return $saved;
     }
 
-    /** ভ্যালিডেশন — ব্যর্থ হলে RuntimeException */
+    /** ভ্যালিডেশন — ব্যর্থ হলে ValidationException (বাংলা বার্তাসহ) */
     public function validate(UploadedFile $file, array $allowed): void
     {
         if (! $file->isValid()) {
-            throw new \RuntimeException('ফাইল আপলোড ব্যর্থ হয়েছে।');
+            throw $this->fail('ফাইল আপলোড ব্যর্থ হয়েছে।');
         }
 
         $maxKb = (int) env('MC_UPLOAD_MAX_KB', 4096);
         if (($file->getSize() / 1024) > $maxKb) {
-            throw new \RuntimeException('ফাইলের সাইজ সর্বোচ্চ '.bn_num($maxKb).' KB হতে পারবে।');
+            throw $this->fail('ফাইলের সাইজ সর্বোচ্চ '.bn_num($maxKb).' KB হতে পারবে।');
         }
 
         $extension = strtolower($file->getClientOriginalExtension());
@@ -107,24 +109,24 @@ class MediaUploader
 
         // এক্সটেনশন অনুমোদিত তালিকায় আছে কিনা
         if (! array_key_exists($extension, $allowed)) {
-            throw new \RuntimeException('অনুমোদিত ফরম্যাট নয়: '.implode(', ', array_keys($allowed)));
+            throw $this->fail('অনুমোদিত ফরম্যাট নয়: '.implode(', ', array_keys($allowed)));
         }
 
         // আসল MIME টাইপ এক্সটেনশনের সাথে মিলছে কিনা (fake mime রোধ)
         if (! in_array($realMime, $allowed, true)) {
-            throw new \RuntimeException('ফাইলের প্রকৃত টাইপ ও এক্সটেনশন মিলছে না — আপলোড প্রত্যাখ্যাত।');
+            throw $this->fail('ফাইলের প্রকৃত টাইপ ও এক্সটেনশন মিলছে না — আপলোড প্রত্যাখ্যাত।');
         }
 
         // ডাবল এক্সটেনশন (যেমন shell.php.jpg) রোধ
         if (preg_match('/\.(php|phtml|phar|pl|py|cgi|sh|exe|js)$/i', $file->getClientOriginalName())) {
-            throw new \RuntimeException('নিরাপত্তার কারণে এই ফাইল গ্রহণ করা হয়নি।');
+            throw $this->fail('নিরাপত্তার কারণে এই ফাইল গ্রহণ করা হয়নি।');
         }
 
         // ছবির ভেতরে PHP কোড লুকানো আছে কিনা
         if (str_starts_with($realMime, 'image/')) {
             $head = (string) file_get_contents($file->getRealPath(), false, null, 0, 2048);
             if (stripos($head, '<?php') !== false || stripos($head, '<script') !== false) {
-                throw new \RuntimeException('ছবির ভেতরে স্ক্রিপ্ট পাওয়া গেছে — আপলোড প্রত্যাখ্যাত।');
+                throw $this->fail('ছবির ভেতরে স্ক্রিপ্ট পাওয়া গেছে — আপলোড প্রত্যাখ্যাত।');
             }
         }
     }
@@ -147,6 +149,15 @@ class MediaUploader
     /** পাবলিক URL তৈরি */
     public function url(?string $path): ?string
     {
-        return $path ? asset('uploads/'.ltrim($path, '/')) : null;
+        return $path ? mc_image($path) : null;
+    }
+
+    /**
+     * ভ্যালিডেশন ব্যর্থতাকে ValidationException এ রূপান্তর করে —
+     * ফলে ব্যবহারকারী 500 এর বদলে বাংলা এরর বার্তা সহ ফর্মে ফিরে যায়।
+     */
+    private function fail(string $message): ValidationException
+    {
+        return ValidationException::withMessages(['files' => $message]);
     }
 }

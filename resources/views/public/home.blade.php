@@ -18,7 +18,7 @@
                class="group block cursor-pointer rounded-2xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-[#263246] dark:bg-[#182233] sm:p-6">
                 <div class="grid grid-cols-1 items-center gap-6 lg:grid-cols-12">
                     <div class="relative aspect-video overflow-hidden rounded-xl bg-gray-100 lg:col-span-7 dark:bg-gray-800">
-                        <img src="{{ $highlight->featured_image ? asset('uploads/'.$highlight->featured_image) : mc_placeholder_svg() }}"
+                        <img src="{{ $highlight->featured_image ? mc_image($highlight->featured_image) : mc_placeholder_svg() }}"
                              alt="{{ $highlight->title }}" loading="eager" decoding="async"
                              class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                              onerror="this.onerror=null;this.src='{{ mc_placeholder_svg() }}'">

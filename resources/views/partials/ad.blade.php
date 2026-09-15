@@ -13,7 +13,7 @@
         @if($ad->type === 'html' && $ad->html_code)
             <div class="w-full overflow-hidden text-center">{!! $ad->html_code !!}</div>
         @else
-            @php $tag = '<img src="'.e(asset('uploads/'.$ad->image)).'" alt="'.e($ad->title).'" class="mx-auto max-w-full h-auto rounded" loading="lazy" decoding="async">'; @endphp
+            @php $tag = '<img src="'.e(mc_image($ad->image)).'" alt="'.e($ad->title).'" class="mx-auto max-w-full h-auto rounded" loading="lazy" decoding="async">'; @endphp
             @if($ad->link)
                 <a href="{{ route('ad.click', $ad) }}" target="{{ $ad->link_target }}" rel="noopener sponsored nofollow" title="{{ $ad->title }}">{!! $tag !!}</a>
             @else

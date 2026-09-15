@@ -39,7 +39,7 @@
         <button type="button" id="closeSidebar" class="rounded p-1 text-gray-400 hover:text-white lg:hidden"><i class="ph-bold ph-x text-lg"></i></button>
     </div>
     <div class="flex items-center gap-3 border-b border-gray-800 p-4">
-        @if($u->avatar)<img src="{{ asset('uploads/'.$u->avatar) }}" alt="" class="h-9 w-9 rounded-full object-cover">@else<span class="flex h-9 w-9 items-center justify-center rounded-full bg-[#E21D2B] font-bold"><i class="ph-fill ph-user"></i></span>@endif
+        @if($u->avatar)<img src="{{ mc_image($u->avatar) }}" alt="" class="h-9 w-9 rounded-full object-cover">@else<span class="flex h-9 w-9 items-center justify-center rounded-full bg-[#E21D2B] font-bold"><i class="ph-fill ph-user"></i></span>@endif
         <div class="min-w-0">
             <p class="truncate text-sm font-bold">{{ $u->name }}</p>
             <p class="truncate text-xs capitalize text-gray-400">{{ $u->roleLabel() }}</p>

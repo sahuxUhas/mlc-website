@@ -59,7 +59,7 @@ $tabs = [['all','সব','bg-slate-100 text-slate-700'],['published','প্র�
         <table class="w-full text-right text-xs">
             <thead class="border-b border-slate-200 bg-slate-50 text-[11px] uppercase text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
                 <tr>
-                    <th class="px-3 py-2.5"><input type="checkbox" id="checkAll" class="h-4 w-4 rounded border-slate-300 text-[#E21D2B]"></th>
+                    <th class="px-3 py-2.5"><input type="checkbox" id="checkAll" data-check-all=".bulk-check" class="h-4 w-4 rounded border-slate-300 text-[#E21D2B]"></th>
                     <th class="px-3 py-2.5">শিরোনাম</th>
                     <th class="px-3 py-2.5">বিভাগ</th>
                     <th class="px-3 py-2.5">রিপোর্টার</th>
@@ -126,10 +126,3 @@ $tabs = [['all','সব','bg-slate-100 text-slate-700'],['published','প্র�
 </form>
 <div class="mt-4">{{ $posts->links() }}</div>
 @endsection
-@push('scripts')
-<script>
-document.getElementById('checkAll')?.addEventListener('change', function(){
-    document.querySelectorAll('.bulk-check').forEach(function(c){ c.checked = this.checked; }.bind(this));
-});
-</script>
-@endpush

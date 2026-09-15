@@ -43,9 +43,20 @@ class MediaController extends Controller
         ]);
 
         $folder = preg_replace('/[^a-z0-9\-_]/i', '', $request->input('folder', 'general')) ?: 'general';
+
+        // আপলোড করা ফাইলের ধরন অনুযায়ী অনুমোদিত তালিকা ঠিক করা
+        // (আগে PDF আপলোডে IMAGE_MIMES চেক ব্যর্থ হয়ে এরর হতো)
+        $allowed = \App\Services\MediaUploader::IMAGE_MIMES;
+        foreach ($request->file('files') as $file) {
+            if (strtolower($file->getClientOriginalExtension()) === 'pdf') {
+                $allowed = $allowed + \App\Services\MediaUploader::DOC_MIMES;
+                break;
+            }
+        }
+
         $saved = [];
 
-        foreach ($this->uploader->storeMany($request->file('files'), $folder) as $media) {
+        foreach ($this->uploader->storeMany($request->file('files'), $folder, $allowed) as $media) {
             $saved[] = ['id' => $media->id, 'url' => $media->url, 'name' => $media->file_name];
         }
 

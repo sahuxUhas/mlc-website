@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'parent_id', 'name', 'slug', 'icon', 'color', 'union_name', 'description',
         'image', 'is_visible', 'show_on_home', 'show_in_menu', 'sort_order',

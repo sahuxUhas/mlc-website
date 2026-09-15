@@ -10,7 +10,7 @@
             @if($announcement->expires_at) &nbsp;•&nbsp; মেয়াদ: {{ bn_date($announcement->expires_at, false) }}@endif
         </p>
         @if($announcement->image)
-            <img src="{{ asset('uploads/'.$announcement->image) }}" alt="{{ $announcement->title }}" class="mt-4 w-full rounded-xl object-cover" loading="lazy">
+            <img src="{{ mc_image($announcement->image) }}" alt="{{ $announcement->title }}" class="mt-4 w-full rounded-xl object-cover" loading="lazy">
         @endif
         @if($announcement->body)
             <div class="mt-5 whitespace-pre-line text-base leading-[2] text-gray-800 dark:text-gray-200">{{ $announcement->body }}</div>

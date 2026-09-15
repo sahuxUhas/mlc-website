@@ -97,7 +97,10 @@ class PostSeeder extends Seeder
                 'author_id' => $admin?->id,
                 'excerpt' => $item['excerpt'],
                 'content' => $item['content'],
-                'featured_image' => $item['img'],   // ডেমো URL — অ্যাডমিন থেকে আপলোডে বদলান
+                // ডেমোতে বাইরের (Unsplash) URL — mc_image() হেল্পার absolute URL
+                // ঠিকভাবে রেন্ডার করে, তাই ছবি ভাঙবে না। অ্যাডমিন থেকে নিজের
+                // আপলোড করা ছবি দিলে এটি uploads/ পাথে বদলে যাবে।
+                'featured_image' => $item['img'],
                 'image_caption' => 'ডেমো নমুনা ছবি',
                 'image_credit' => 'Unsplash (ডেমো)',
                 'status' => 'published',

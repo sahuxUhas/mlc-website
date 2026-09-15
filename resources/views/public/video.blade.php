@@ -40,7 +40,7 @@
                     <li>
                         <a href="{{ route('videos.show', $item->slug) }}" class="group flex items-start gap-3">
                             <div class="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-900">
-                                @if($item->thumbnail)<img src="{{ asset('uploads/'.$item->thumbnail) }}" alt="{{ $item->title }}" loading="lazy" class="h-full w-full object-cover">@endif
+                                @if($item->thumbnail)<img src="{{ mc_image($item->thumbnail) }}" alt="{{ $item->title }}" loading="lazy" class="h-full w-full object-cover">@endif
                                 <span class="absolute inset-0 flex items-center justify-center"><i class="ph-fill ph-play text-lg text-white/90"></i></span>
                             </div>
                             <span class="line-clamp-2 text-[13px] font-bold leading-snug text-gray-800 group-hover:text-[#E21D2B] dark:text-[#F1F5F9] dark:group-hover:text-[#22C55E]">{{ $item->title }}</span>

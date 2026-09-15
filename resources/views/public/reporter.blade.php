@@ -3,7 +3,7 @@
 @section('content')
 <div class="container mx-auto max-w-6xl px-3 py-6 sm:px-4 md:py-8">
     <div class="mb-6 flex items-start gap-4 rounded-2xl border border-gray-200 bg-white p-5 dark:border-[#263246] dark:bg-[#182233]">
-        @if($reporter->photo)<img src="{{ asset('uploads/'.$reporter->photo) }}" alt="{{ $reporter->name }}" class="h-20 w-20 rounded-full object-cover ring-2 ring-[#C5E7C8]">@else<i class="ph-fill ph-user-circle text-6xl text-gray-300"></i>@endif
+        @if($reporter->photo)<img src="{{ mc_image($reporter->photo) }}" alt="{{ $reporter->name }}" class="h-20 w-20 rounded-full object-cover ring-2 ring-[#C5E7C8]">@else<i class="ph-fill ph-user-circle text-6xl text-gray-300"></i>@endif
         <div>
             <h1 class="font-serif text-xl font-bold text-gray-900 dark:text-[#F1F5F9] sm:text-2xl">{{ $reporter->name }}</h1>
             @if($reporter->designation)<p class="text-sm font-semibold text-[#1F7A3D] dark:text-[#22C55E]">{{ $reporter->designation }}</p>@endif

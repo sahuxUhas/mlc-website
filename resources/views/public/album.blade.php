@@ -9,7 +9,7 @@
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         @foreach($album->photos as $photo)
             <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-                <img src="{{ asset('uploads/'.$photo->path) }}" alt="{{ $photo->caption ?: $album->title }}" loading="lazy" class="aspect-square w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105" data-mc-lightbox="{{ asset('uploads/'.$photo->path) }}">
+                <img src="{{ mc_image($photo->path) }}" alt="{{ $photo->caption ?: $album->title }}" loading="lazy" class="aspect-square w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105" data-mc-lightbox="{{ mc_image($photo->path) }}">
                 @if($photo->caption)<figcaption class="px-2 py-1.5 text-[11px] text-gray-600 dark:text-[#94A3B8]">{{ $photo->caption }}</figcaption>@endif
             </figure>
         @endforeach

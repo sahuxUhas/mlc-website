@@ -2,7 +2,7 @@
 @props(['post', 'category' => null, 'variant' => 'default'])
 @php
     $cat = $category ?? $post->category;
-    $img = $post->featured_image ? asset('uploads/'.$post->featured_image) : mc_placeholder_svg();
+    $img = $post->featured_image ? mc_image($post->featured_image) : mc_placeholder_svg();
 @endphp
 
 <a href="{{ route('news.show', $post->slug) }}"

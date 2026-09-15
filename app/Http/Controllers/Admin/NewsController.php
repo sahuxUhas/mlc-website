@@ -234,8 +234,8 @@ class NewsController extends Controller
             'unpublish' => $query->update(['status' => 'draft']),
             'draft'     => $query->update(['status' => 'draft']),
             'archive'   => $query->update(['status' => 'archived']),
-            'trash'     => tap($query->get()->count(), fn () => $query->get()->each->delete()),
-            'restore'   => tap($query->get()->count(), fn () => $query->get()->each->restore()),
+            'trash'     => tap($models = $query->get(), fn () => $models->each->delete())->count(),
+            'restore'   => tap($models = $query->get(), fn () => $models->each->restore())->count(),
             'delete'    => tap($query->count(), fn () => $query->forceDelete()),
         };
 
@@ -247,15 +247,67 @@ class NewsController extends Controller
     /** ছবির ক্রম পরিবর্তন (drag & drop থেকে আসা order) */
     public function reorderImages(Request $request, Post $post)
     {
+        // দুই ফরম্যাটই গ্রহণযোগ্য: order[]=1&order[]=2 (array) অথবা order=1,2 (comma string)
+        $raw = $request->input('order');
+
+        if (is_string($raw)) {
+            $raw = array_values(array_filter(explode(',', $raw), fn ($v) => $v !== ''));
+        }
+
         $validated = $request->validate(['order' => ['required', 'array'], 'order.*' => ['integer']]);
+        $validated['order'] = array_map('intval', $validated['order']);
 
         foreach ($validated['order'] as $index => $imageId) {
+            // অন্য সংবাদের ছবি যাতে সরানো না যায়
             $post->images()->where('id', $imageId)->update(['sort_order' => $index]);
         }
 
         ActivityLogger::log('reorder_images', 'news', 'ছবির ক্রম পরিবর্তন: '.$post->title, $post);
 
         return back()->with('success', 'ছবির ক্রম হালনাগাদ হয়েছে।');
+    }
+
+    /**
+     * এডিট পেজ থেকে সরাসরি নতুন ছবি আপলোড (ফর্ম রিসাবমিট ছাড়াই গ্যালারিতে যোগ হয়)।
+     */
+    public function addImages(Request $request, Post $post)
+    {
+        $this->authorizeEdit($post);
+
+        $request->validate([
+            'images'   => ['required', 'array', 'min:1', 'max:20'],
+            'images.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ], [], ['images' => 'ছবি']);
+
+        $next = (int) $post->images()->max('sort_order') + 1;
+        $added = 0;
+
+        foreach ($this->uploader->storeMany($request->file('images'), 'news/gallery') as $media) {
+            $post->images()->create(['path' => $media->path, 'sort_order' => $next++]);
+            $added++;
+        }
+
+        ActivityLogger::log('add_images', 'news', bn_num($added).'টি ছবি যোগ: '.$post->title, $post);
+
+        return back()->with('success', bn_num($added).'টি ছবি গ্যালারিতে যোগ হয়েছে।');
+    }
+
+    /**
+     * গ্যালারির যেকোনো ছবিকে Featured Image বানানো।
+     */
+    public function setFeaturedImage(Request $request, Post $post)
+    {
+        $this->authorizeEdit($post);
+
+        $validated = $request->validate(['image_id' => ['required', 'integer']]);
+
+        $image = $post->images()->findOrFail($validated['image_id']);
+
+        $post->update(['featured_image' => $image->path]);
+
+        ActivityLogger::log('set_featured_image', 'news', 'ফিচার্ড ছবি পরিবর্তন: '.$post->title, $post);
+
+        return back()->with('success', 'এই ছবিটি ফিচার্ড ইমেজ হিসেবে সেট হয়েছে।');
     }
 
     public function destroyImage(Request $request, Post $post, PostImage $image)

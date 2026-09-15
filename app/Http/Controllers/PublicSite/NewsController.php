@@ -59,6 +59,6 @@ class NewsController extends Controller
             abort(404);
         }
 
-        return redirect()->route('news.show', $post->slug), 301;
+        return redirect()->to(route('news.show', $post->slug), 301);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -10,6 +11,7 @@ use Illuminate\Support\Str;
 
 class Post extends Model
 {
+    use HasFactory;
     use SoftDeletes;
 
     public const STATUSES = [
@@ -71,9 +73,10 @@ class Post extends Model
                  ->where('published_at', '<=', now());
     }
 
+    /** প্রকাশিত + ভবিষ্যতের তারিখ নয় — পাবলিক সাইটে দেখানো যাবে এমন সংবাদ */
     public function scopeVisible(Builder $q): Builder
     {
-        return $q->published()->withTrashed() === $q ? $q : $q->published();
+        return $q->published();
     }
 
     public function scopeFeatured(Builder $q): Builder
@@ -162,11 +165,30 @@ class Post extends Model
             }
         });
 
-        // ক্যাটাগরির সংবাদ-সংখ্যা হালনাগাদ
+        // ক্যাটাগরির প্রকাশিত সংবাদ-সংখ্যা সঠিকভাবে পুনর্গণনা
         static::saved(function (Post $post) {
-            $post->category?->decrement('posts_count');
-            $post->category?->increment('posts_count');
+            static::refreshCategoryCount($post->category_id);
+
+            if ($post->isDirty('category_id') && $post->getOriginal('category_id')) {
+                static::refreshCategoryCount($post->getOriginal('category_id'));
+            }
         });
+
+        static::deleted(function (Post $post) {
+            static::refreshCategoryCount($post->category_id);
+        });
+    }
+
+    /** নির্দিষ্ট ক্যাটাগরির posts_count পুনর্গণনা (ডেনormalized কাউন্টার সঠিক রাখতে) */
+    public static function refreshCategoryCount(?int $categoryId): void
+    {
+        if (! $categoryId) {
+            return;
+        }
+
+        $count = static::withTrashed()->where('category_id', $categoryId)->count();
+
+        Category::where('id', $categoryId)->update(['posts_count' => $count]);
     }
 
     public function incrementViews(): void

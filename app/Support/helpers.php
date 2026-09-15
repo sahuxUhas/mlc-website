@@ -76,8 +76,8 @@ if (! function_exists('bn_date')) {
             return '';
         }
 
-        $ts = $date instanceof \DateTimeInterface ? $date->getTimestamp() : strtotime((string) $date);
-        if ($ts === false) {
+        $carbon = mc_carbon($date);
+        if ($carbon === null) {
             return '';
         }
 
@@ -85,10 +85,9 @@ if (! function_exists('bn_date')) {
             1 => 'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
             'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর',
         ];
-        $days = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
 
-        $h24 = (int) gmdate('H', $ts);
-        $min = (int) gmdate('i', $ts);
+        $h24 = (int) $carbon->format('G');
+        $min = (int) $carbon->format('i');
 
         $period = match (true) {
             $h24 < 4  => 'রাত',
@@ -102,7 +101,7 @@ if (! function_exists('bn_date')) {
 
         $h12 = $h24 % 12 ?: 12;
 
-        $out = bn_num((int) gmdate('j', $ts)).' '.$months[(int) gmdate('n', $ts)].' '.bn_num((int) gmdate('Y', $ts));
+        $out = bn_num((int) $carbon->format('j')).' '.$months[(int) $carbon->format('n')].' '.bn_num((int) $carbon->format('Y'));
 
         if ($withTime) {
             $out .= ', '.$period.' '.bn_num($h12).':'.str_pad(bn_num($min), 2, '০', STR_PAD_LEFT);
@@ -116,15 +115,12 @@ if (! function_exists('bn_day_date')) {
     /** হেডারের জন্য পূর্ণ বাংলা তারিখ — "সোমবার, ১৫ সেপ্টেম্বর ২০২৬" */
     function bn_day_date($date = null): string
     {
-        $ts = $date ? (strtotime((string) $date) ?: time()) : time();
+        $carbon = mc_carbon($date) ?? now();
         $days = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'];
         $months = [1=>'জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
 
-        // Asia/Dhaka = UTC+6
-        $ts += 6 * 3600;
-
-        return $days[(int) gmdate('w', $ts)].', '.bn_num((int) gmdate('j', $ts)).' '
-             .$months[(int) gmdate('n', $ts)].' '.bn_num((int) gmdate('Y', $ts));
+        return $days[(int) $carbon->format('w')].', '.bn_num((int) $carbon->format('j')).' '
+             .$months[(int) $carbon->format('n')].' '.bn_num((int) $carbon->format('Y'));
     }
 }
 
@@ -136,8 +132,12 @@ if (! function_exists('bn_ago')) {
             return '';
         }
 
-        $ts = $date instanceof \DateTimeInterface ? $date->getTimestamp() : strtotime((string) $date);
-        $diff = max(0, time() - $ts);
+        $carbon = mc_carbon($date);
+        if ($carbon === null) {
+            return '';
+        }
+
+        $diff = max(0, now()->diffInSeconds($carbon, false));
 
         return match (true) {
             $diff < 60        => 'এইমাত্র',
@@ -169,6 +169,62 @@ if (! function_exists('mc_placeholder_svg')) {
              ."<circle cx='400' cy='160' r='6' fill='#D50E18'/></svg>";
 
         return 'data:image/svg+xml,'.rawurlencode($svg);
+    }
+}
+
+if (! function_exists('mc_carbon')) {
+    /**
+     * যেকোনো তারিখ ইনপুটকে অ্যাপের টাইমজোনে (Asia/Dhaka) Carbon অবজেক্টে রূপান্তর।
+     * এতে gmdate ব্যবহারের কারণে ৬ ঘণ্টা সময় এদিক-ওদিক হওয়ার সমস্যা থাকে না।
+     */
+    function mc_carbon($date): ?\Illuminate\Support\Carbon
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        try {
+            if ($date instanceof \Illuminate\Support\Carbon || $date instanceof \Carbon\Carbon) {
+                return $date->copy()->setTimezone(config('app.timezone', 'Asia/Dhaka'));
+            }
+
+            if ($date instanceof \DateTimeInterface) {
+                return \Illuminate\Support\Carbon::instance($date)->setTimezone(config('app.timezone', 'Asia/Dhaka'));
+            }
+
+            return \Illuminate\Support\Carbon::parse($date, config('app.timezone', 'Asia/Dhaka'));
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+}
+
+if (! function_exists('mc_image')) {
+    /**
+     * ছবির সঠিক URL তৈরি করে — তিনটি ক্ষেত্র সামলায়:
+     *   1. সম্পূর্ণ URL (http/https/data:) → যেমন আছে তেমন
+     *   2. ইতিমধ্যে /uploads বা /storage দিয়ে শুরু → asset()
+     *   3. আপেক্ষিক পাথ → asset('uploads/…')
+     * খালি/ভুল পাথ হলে ব্র্যান্ডেড প্লেসহোল্ডার রিটার্ন করে (ভাঙা ছবি কখনো দেখায় না)।
+     */
+    function mc_image(?string $path, ?string $fallback = null): string
+    {
+        $fallback = $fallback ?? mc_placeholder_svg();
+        $path = trim((string) $path);
+
+        if ($path === '') {
+            return $fallback;
+        }
+
+        if (preg_match('~^(https?:)?//|^data:~i', $path)) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/')) {
+            return asset(ltrim($path, '/'));
+        }
+
+        return asset('uploads/'.ltrim($path, '/'));
     }
 }
 

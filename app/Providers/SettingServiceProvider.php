@@ -19,15 +19,12 @@ class SettingServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // ইনস্টলেশনের আগে (টেবিল না থাকলে) সাইট থামবে না
-        if (! app()->runningInConsole() || app()->runningUnitTests()) {
-            $this->applySettings();
-        }
-
+        // ইনস্টলেশনের আগে (টেবিল/ডাটাবেস না থাকলে) সাইট থামবে না
         try {
             if (! \Schema::hasTable('settings')) {
                 return;
             }
+
             $this->applySettings();
         } catch (\Throwable $e) {
             // ডাটাবেস সংযোগ না থাকলে ডিফল্ট কনফিগই চালু থাকবে
