@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="bn" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ডেমো — News Details পেজ | দৈনিক মহালছড়ি নিউজ</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="site.css">
+<style>
+  /* শুধু এই স্ট্যাটিক ডেমো পেজের জন্য — Laravel অ্যাপের অংশ নয় */
+  .pv-note { background:#0B0B0B; color:#F1F5F9; font-size:12px; font-weight:600; padding:.55rem 1rem; text-align:center; line-height:1.7; }
+  .pv-note b { color:#22C55E; }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0D1422] dark:text-[#F1F5F9] transition-colors duration-200 mc-body-pad">
+
+<div class="pv-note">
+  🔎 <b>স্ট্যাটিক ডেমো</b> — নতুন News Details পেজের layout (সাইটের আসল CSS/JS থেকে)।
+  Laravel-এর সব ডেটা ডাটাবেস থেকে আসে; এখানে শুধু দেখানোর জন্য নমুনা লেখা।
+  ডান দিকের 🌙 বাটনে <b>ডার্ক মোড</b>, ব্রাউজার ছোট করলে <b>মোবাইল ভিউ</b> দেখুন।
+</div>
+
+<!-- ===== হেডার (সাইটের হেডার ডিজাইন অপরিবর্তিত; এখানে সংক্ষিপ্ত রূপ) ===== -->
+<header class="sticky top-0 z-[80] border-b border-gray-200 bg-white/95 backdrop-blur transition-colors duration-200 dark:border-[#263246] dark:bg-[#0D1422]/95">
+  <div class="container mx-auto px-3 sm:px-4">
+    <div class="flex items-center justify-between gap-3 py-2 md:py-3">
+      <a href="#" class="group flex min-w-0 items-center gap-2.5 text-left md:gap-3.5">
+        <span class="relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#C5E7C8] shadow-[0_2px_10px_rgba(11,11,11,0.10)] ring-1 ring-black/10 sm:h-11 sm:w-11 md:h-[3.25rem] md:w-[3.25rem] md:rounded-xl">
+          <span class="flex h-full w-full items-center justify-center font-serif text-lg font-black text-[#1F7A3D]">ম</span>
+        </span>
+        <span class="flex min-w-0 flex-col">
+          <span class="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-[#94A3B8] md:text-xs">দৈনিক</span>
+          <span class="whitespace-nowrap font-serif text-[1.1rem] font-black leading-none tracking-tight text-[#0B0B0B] dark:text-[#F1F5F9] sm:text-2xl md:text-[2.05rem]">মহালছড়ি <span class="text-[#E21D2B]">নিউজ</span></span>
+          <span class="mt-0.5 flex items-center gap-1.5 whitespace-nowrap text-[10px] font-medium text-[#1F7A3D] dark:text-[#22C55E] sm:text-[11px] md:text-[13px]">
+            <span class="inline-block h-1 w-1 rounded-full bg-[#E21D2B]"></span> পাহাড়ের কথা বলে
+          </span>
+        </span>
+      </a>
+      <div class="flex shrink-0 items-center gap-2 md:gap-2.5">
+        <button type="button" data-mc-theme-toggle class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#22C55E]" aria-label="থিম পরিবর্তন" title="ডার্ক/লাইট মোড">
+          <i class="ph-bold ph-moon text-[20px] dark:hidden"></i>
+          <i class="ph-bold ph-sun hidden text-[20px] text-amber-400 dark:block"></i>
+        </button>
+        <button type="button" class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#F1F5F9]" aria-label="খুঁজুন"><i class="ph ph-magnifying-glass text-[19px]"></i></button>
+        <button type="button" class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#F1F5F9]" aria-label="সব মেনু"><i class="ph ph-list text-[19px]"></i></button>
+      </div>
+    </div>
+  </div>
+  <nav class="hidden border-t border-black/10 bg-[#0B0B0B] text-white md:block dark:border-white/5">
+    <div class="container mx-auto flex items-stretch gap-4 px-4">
+      <ul class="hide-scrollbar flex items-stretch overflow-x-auto whitespace-nowrap">
+        <li><a href="#" class="flex h-full items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]"><i class="ph-fill ph-house"></i> হোম</a></li>
+        <li><a href="#" class="block h-full px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]">মহালছড়ি</a></li>
+        <li><a href="#" class="block h-full px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]">মাইসছড়ি</a></li>
+        <li><a href="#" class="block h-full px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]">ক্যায়াংঘাট</a></li>
+        <li><a href="#" class="block h-full px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]">জেলার খবর</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<!-- ===== ব্রেকিং বার (সাইটে আগের মতোই থাকবে) ===== -->
+<div class="border-b border-gray-200 bg-white dark:border-[#263246] dark:bg-[#182233]">
+  <div class="container mx-auto flex items-center gap-2 px-3 py-2 sm:px-4">
+    <span class="shrink-0 rounded-md bg-[#E21D2B] px-2 py-1 text-[10px] font-bold text-white">ব্রেকিং নিউজ</span>
+    <div class="ticker-wrap min-w-0 flex-1 text-[13px] font-semibold text-gray-700 dark:text-[#F1F5F9]"><div class="ticker">মহালছড়িতে টানা বৃষ্টি: নদীতে ভাঙন, বাজার এলাকায় হাঁটুপানি</div></div>
+  </div>
+</div>
+
+<main class="min-h-[60vh]">
+
+<!-- ============================================================
+     News Details — নতুন কাঠামো: শিরোনাম → ছবি → কনটেন্ট → শেয়ার → ফলো → মন্তব্য
+     (resources/views/public/article.blade.php এর হুবহু রূপ)
+     ============================================================ -->
+<article class="mc-article container mx-auto max-w-6xl px-3 py-6 sm:px-4 md:py-8">
+  <div class="mc-article-shell mx-auto">
+
+    <!-- ১. শিরোনাম (পেজে একবারই — breadcrumb/ব্যাজ নেই) -->
+    <h1 class="mb-5 font-serif text-2xl font-bold leading-snug text-gray-900 dark:text-[#F1F5F9] sm:text-3xl md:text-[2.1rem] md:leading-[1.45]">
+      মহালছড়িতে টানা বৃষ্টি: নদীতে ভাঙন, বাজার এলাকায় হাঁটুপানি
+    </h1>
+
+    <!-- ২. ফিচার্ড ছবি (নিচে duplicate শিরোনাম নেই) -->
+    <figure class="mb-6">
+      <div class="overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='800' height='450' fill='%23EAF7EC'/%3E%3Cpath d='M0 350 L170 215 L300 330 L440 190 L580 335 L700 250 L800 350 L800 450 L0 450 Z' fill='%23C5E7C8'/%3E%3Cpath d='M0 400 L210 305 L380 400 L540 300 L690 405 L800 355 L800 450 L0 450 Z' fill='%231F7A3D' opacity='0.22'/%3E%3Ctext x='400' y='130' font-family='Helvetica,Arial' font-size='26' font-weight='700' fill='%230B0B0B' text-anchor='middle'%3Efeatured_image — ডাটাবেস থেকে%3C/text%3E%3Ctext x='400' y='170' font-family='Helvetica,Arial' font-size='16' fill='%231F7A3D' text-anchor='middle'%3E(ছবি না থাকলে কোনো কিছুই দেখাবে না)%3C/text%3E%3C/svg%3E"
+             alt="ফিচার্ড ছবি" class="mc-article-hero w-full object-cover" loading="eager" decoding="async">
+      </div>
+      <figcaption class="mt-2 text-xs text-gray-500 dark:text-[#94A3B8]">নমুনা ছবি — caption ডাটাবেসে থাকলে শুধু সেটিই দেখাবে।</figcaption>
+    </figure>
+
+    <!-- ৩. নিউজ কনটেন্ট (Article body typography) -->
+    <div class="article-body font-serif text-[1.02rem] leading-[2] text-gray-800 dark:text-gray-200">
+      <p>টানা তিন দিনের বর্ষণে মহালছড়ি উপজেলার নিম্নাঞ্চলে পানি বাড়ছে। স্থানীয় সূত্রে জানা গেছে, চেঙ্গী নদীর পানি বিপৎসীমার কাছাকাছি পৌঁছেছে এবং বাজার এলাকার কয়েকটি সড়কে হাঁটুপানি জমেছে।</p>
+      <p>উপজেলা প্রশাসন জানিয়েছে, ক্ষতিগ্রস্ত পরিবারগুলোর তালিকা তৈরি করা হচ্ছে এবং আশ্রয়কেন্দ্র প্রস্তুত রাখা হয়েছে। জরুরি প্রয়োজনে কন্ট্রোল রুমে যোগাযোগ করার অনুরোধ জানানো হয়েছে।</p>
+      <blockquote>“পানি বাড়লেও এখন পর্যন্ত হতাহতের কোনো খবর নেই। সবাইকে সতর্ক থাকার অনুরোধ করছি।”</blockquote>
+      <h2>সড়ক যোগাযোগে প্রভাব</h2>
+      <p>এদিকে বাজারের ব্যবসায়ীরা বলছেন, পানি দ্রুত না নামলে নিত্যপণ্যের সরবরাহে প্রভাব পড়তে পারে। বিকল্প পথে পণ্য আনার চেষ্টা চলছে।</p>
+      <ul>
+        <li>নদীর পানি বিপৎসীমার কাছাকাছি — সতর্কতা জারি</li>
+        <li>দুইটি বিদ্যালয়ে আশ্রয়কেন্দ্র প্রস্তুত</li>
+        <li>কন্ট্রোল রুম চালু, স্বেচ্ছাসেবক দল প্রস্তুত</li>
+      </ul>
+    </div>
+
+    <!-- ছবি ঘর (একাধিক ছবি থাকলে) -->
+    <section class="mt-8">
+      <h2 class="mb-3 flex items-center gap-2 font-serif text-lg font-bold text-gray-900 dark:text-[#F1F5F9]">
+        <span class="h-5 w-1.5 rounded-sm bg-[#E21D2B]"></span> ছবি ঘর
+      </h2>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='270'%3E%3Crect width='480' height='270' fill='%23EAF7EC'/%3E%3Ctext x='240' y='145' font-family='Helvetica,Arial' font-size='20' fill='%231F7A3D' text-anchor='middle'%3Eছবি ১%3C/text%3E%3C/svg%3E" alt="" class="aspect-video w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" data-mc-lightbox="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='800' height='450' fill='%23EAF7EC'/%3E%3Ctext x='400' y='235' font-family='Helvetica,Arial' font-size='34' fill='%231F7A3D' text-anchor='middle'%3Eছবি ১ (লাইটবক্স)%3C/text%3E%3C/svg%3E">
+        </figure>
+        <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='270'%3E%3Crect width='480' height='270' fill='%23EAF7EC'/%3E%3Ctext x='240' y='145' font-family='Helvetica,Arial' font-size='20' fill='%231F7A3D' text-anchor='middle'%3Eছবি ২%3C/text%3E%3C/svg%3E" alt="" class="aspect-video w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" data-mc-lightbox="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='800' height='450' fill='%23EAF7EC'/%3E%3Ctext x='400' y='235' font-family='Helvetica,Arial' font-size='34' fill='%231F7A3D' text-anchor='middle'%3Eছবি ২ (লাইটবক্স)%3C/text%3E%3C/svg%3E">
+        </figure>
+        <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='480' height='270'%3E%3Crect width='480' height='270' fill='%23EAF7EC'/%3E%3Ctext x='240' y='145' font-family='Helvetica,Arial' font-size='20' fill='%231F7A3D' text-anchor='middle'%3Eছবি ৩%3C/text%3E%3C/svg%3E" alt="" class="aspect-video w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" data-mc-lightbox="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450'%3E%3Crect width='800' height='450' fill='%23EAF7EC'/%3E%3Ctext x='400' y='235' font-family='Helvetica,Arial' font-size='34' fill='%231F7A3D' text-anchor='middle'%3Eছবি ৩ (লাইটবক্স)%3C/text%3E%3C/svg%3E">
+        </figure>
+      </div>
+    </section>
+
+    <!-- ৪. শেয়ার (compact) — Facebook / Messenger / WhatsApp / Telegram / X / Copy Link -->
+    <section class="mt-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-[#263246] dark:bg-[#182233] sm:p-5" aria-labelledby="mc-share-title">
+      <div class="mc-sec-head">
+        <h2 id="mc-share-title" class="mc-sec-title"><i class="ph-fill ph-share-network text-[#E21D2B]"></i> সংবাদটি শেয়ার করুন</h2>
+        <span class="mc-copy-msg" data-mc-copy-msg role="status" aria-live="polite"></span>
+      </div>
+      <div class="mc-share-grid">
+        <a class="mc-share-btn mc-share-fb" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fmahalcharinews.com%2Fnews%2Fdemo" target="_blank" rel="noopener noreferrer"><i class="ph-fill ph-facebook-logo"></i><span>Facebook</span></a>
+        <button type="button" class="mc-share-btn mc-share-msgr" data-mc-share-messenger data-url="https://mahalcharinews.com/news/demo" data-title="মহালছড়িতে টানা বৃষ্টি"><i class="ph-fill ph-messenger-logo"></i><span>Messenger</span></button>
+        <a class="mc-share-btn mc-share-wa" href="https://wa.me/?text=%E0%A6%AE%E0%A6%B9%E0%A6%BE%E0%A6%B2%E0%A6%9B%E0%A6%A1%E0%A6%BC%E0%A6%BF%20https%3A%2F%2Fmahalcharinews.com%2Fnews%2Fdemo" target="_blank" rel="noopener noreferrer"><i class="ph-fill ph-whatsapp-logo"></i><span>WhatsApp</span></a>
+        <a class="mc-share-btn mc-share-tg" href="https://t.me/share/url?url=https%3A%2F%2Fmahalcharinews.com%2Fnews%2Fdemo&amp;text=%E0%A6%AE%E0%A6%B9%E0%A6%BE%E0%A6%B2%E0%A6%9B%E0%A6%A1%E0%A6%BC%E0%A6%BF" target="_blank" rel="noopener noreferrer"><i class="ph-fill ph-telegram-logo"></i><span>Telegram</span></a>
+        <a class="mc-share-btn mc-share-x" href="https://twitter.com/intent/tweet?url=https%3A%2F%2Fmahalcharinews.com%2Fnews%2Fdemo&amp;text=%E0%A6%AE%E0%A6%B9%E0%A6%BE%E0%A6%B2%E0%A6%9B%E0%A6%A1%E0%A6%BC%E0%A6%BF" target="_blank" rel="noopener noreferrer"><i class="ph-fill ph-x-logo"></i><span>X</span></a>
+        <button type="button" class="mc-share-btn mc-share-copy" data-mc-share-copy data-url="https://mahalcharinews.com/news/demo"><i class="ph ph-link"></i><span>কপি লিংক</span></button>
+      </div>
+      <button type="button" class="mc-native-share" data-mc-share-native data-url="https://mahalcharinews.com/news/demo" data-title="মহালছড়িতে টানা বৃষ্টি"><i class="ph ph-share-fat"></i> সবার সাথে শেয়ার করুন</button>
+    </section>
+
+    <!-- ৫. ফেসবুক ফলো (URL সেটিংস থেকে আসে) -->
+    <section class="mc-follow mt-5">
+      <div class="mc-follow-text">
+        <i class="ph-fill ph-facebook-logo mc-follow-ico" aria-hidden="true"></i>
+        <p>মহালছড়ির প্রতিটি খবর সবার আগে পেতে মহালছড়ি নিউজ-এর ফেসবুক পেজ ফলো করুন।</p>
+      </div>
+      <a class="mc-follow-btn" href="https://www.facebook.com/mahalcharinews" target="_blank" rel="noopener"><i class="ph-fill ph-user-plus"></i> ফেসবুকে ফলো করুন</a>
+    </section>
+
+    <!-- ৬. মন্তব্য (compact) -->
+    <section id="comments" class="mt-6 rounded-2xl border border-gray-200 bg-white p-4 dark:border-[#263246] dark:bg-[#182233] sm:p-5">
+      <div class="mc-sec-head">
+        <h2 class="mc-sec-title"><i class="ph-fill ph-chats-circle text-[#E21D2B]"></i> মন্তব্য <span class="mc-count">২</span></h2>
+        <button type="button" class="mc-comment-toggle" data-mc-comment-toggle data-open-label="💬 মন্তব্য করুন" data-close-label="বন্ধ করুন" aria-expanded="false" aria-controls="mc-comment-form">
+          <i class="ph ph-chat-circle-dots"></i><span>💬 মন্তব্য করুন</span>
+        </button>
+      </div>
+
+      <div id="mc-comment-form" class="mc-comment-form">
+        <form class="space-y-3" onsubmit="event.preventDefault(); this.querySelector('.mc-note-demo').classList.remove('hidden');">
+          <div>
+            <label class="mc-form-label">আপনার নাম <span class="text-[#E21D2B]">*</span></label>
+            <input type="text" class="mc-form-input" placeholder="নাম লিখুন" required minlength="2" maxlength="60" autocomplete="name">
+          </div>
+          <div>
+            <label class="mc-form-label">আপনার মন্তব্য <span class="text-[#E21D2B]">*</span></label>
+            <textarea rows="3" class="mc-form-input" placeholder="মন্তব্য লিখুন" required minlength="4" maxlength="2000"></textarea>
+          </div>
+          <button type="submit" class="mc-submit-btn"><i class="ph ph-paper-plane-tilt"></i> মন্তব্য পাঠান</button>
+          <p class="mc-note-demo hidden text-[11px] font-semibold text-[#1F7A3D] dark:text-[#22C55E]">ডেমোতে সাবমিট নিষ্ক্রিয় — আসল সাইটে জমা হয়ে “আপনার মন্তব্য পর্যালোচনার জন্য পাঠানো হয়েছে।” দেখাবে (admin approval-এর পর প্রকাশিত)।</p>
+        </form>
+      </div>
+
+      <div class="mc-comments">
+        <div class="mc-comment">
+          <span class="mc-comment-avatar" aria-hidden="true">র</span>
+          <div class="mc-comment-main">
+            <div class="mc-comment-meta">
+              <span class="mc-comment-name">রহিম উদ্দিন</span>
+              <span class="mc-comment-time"><i class="ph ph-clock"></i> ২ ঘণ্টা আগে</span>
+            </div>
+            <p class="mc-comment-body">খবরটি খুব কাজে লাগল। পানি কখন কমতে শুরু করবে জানালে ভালো হয়।</p>
+            <form class="mc-comment-report" onsubmit="return false;"><button type="submit"><i class="ph ph-flag"></i> রিপোর্ট</button></form>
+          </div>
+        </div>
+        <div class="mc-comment">
+          <span class="mc-comment-avatar" aria-hidden="true">স</span>
+          <div class="mc-comment-main">
+            <div class="mc-comment-meta">
+              <span class="mc-comment-name">সুমাইয়া আক্তার</span>
+              <span class="mc-comment-time"><i class="ph ph-clock"></i> ৪০ মিনিট আগে</span>
+            </div>
+            <p class="mc-comment-body">আশ্রয়কেন্দ্রের তালিকা থাকলে তা জানানোর অনুরোধ রইল। ধন্যবাদ।</p>
+            <form class="mc-comment-report" onsubmit="return false;"><button type="submit"><i class="ph ph-flag"></i> রিপোর্ট</button></form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</article>
+</main>
+
+<!-- ===== ফুটার (ডিজাইন অপরিবর্তিত; সংবাদের পেজে "বিভাগসমূহ" কলাম থাকে না) ===== -->
+<footer class="mt-12 border-t border-gray-200 bg-[#0B0B0B] text-gray-300 dark:border-[#263246]">
+  <div class="container mx-auto grid grid-cols-1 gap-8 px-4 py-10 md:grid-cols-2 lg:grid-cols-3">
+    <div>
+      <div class="mb-3 flex items-center gap-2.5">
+        <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#C5E7C8] ring-1 ring-white/10"><span class="font-serif text-lg font-black text-[#1F7A3D]">ম</span></span>
+        <span class="flex flex-col">
+          <span class="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-400">দৈনিক</span>
+          <span class="whitespace-nowrap font-serif text-xl font-black leading-none text-white">মহালছড়ি নিউজ</span>
+        </span>
+      </div>
+      <p class="mb-3 text-xs font-medium text-[#22C55E]">পাহাড়ের কথা বলে</p>
+      <p class="text-sm leading-relaxed text-gray-400">মহালছড়ি উপজেলা, খাগড়াছড়ি ও পার্বত্য চট্টগ্রামের সর্বশেষ সংবাদ, ভিডিও ও ফটো গ্যালারি।</p>
+    </div>
+    <div>
+      <h3 class="mb-3 font-serif text-base font-bold text-white">গুরুত্বপূর্ণ লিংক</h3>
+      <ul class="space-y-1.5 text-sm">
+        <li><a href="#" class="text-gray-400 hover:text-[#E21D2B]">সর্বশেষ সংবাদ</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-[#E21D2B]">ভিডিও</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-[#E21D2B]">ঘোষণা</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-[#E21D2B]">ফটো গ্যালারি</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="mb-3 font-serif text-base font-bold text-white">যোগাযোগ</h3>
+      <ul class="space-y-2 text-sm text-gray-400">
+        <li class="flex items-center gap-2"><i class="ph ph-map-pin text-[#E21D2B]"></i><span>মহালছড়ি, খাগড়াছড়ি</span></li>
+        <li class="flex items-center gap-2"><i class="ph ph-phone text-[#E21D2B]"></i><span dir="ltr">+৮৮০ ১৭১১ ২৩৪৫৬৭</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container mx-auto px-4 py-4 text-center text-xs text-gray-500">© দৈনিক মহালছড়ি নিউজ — স্ট্যাটিক ডেমো (সাইটের আসল ডিজাইন টোকেন)</div>
+  </div>
+</footer>
+
+<!-- ===== মোবাইল বটম নেভিগেশন (অপরিবর্তিত) ===== -->
+<nav class="mc-bottomnav md:hidden" aria-label="মোবাইল নেভিগেশন">
+  <ul>
+    <li><a href="#"><i class="mc-bn-ico ph ph-house"></i><span class="mc-bn-txt">হোম</span></a></li>
+    <li><a href="#"><i class="mc-bn-ico ph ph-clock-counter-clockwise"></i><span class="mc-bn-txt">সর্বশেষ</span></a></li>
+    <li><a href="#"><i class="mc-bn-ico ph ph-play-circle"></i><span class="mc-bn-txt">ভিডিও</span></a></li>
+    <li><a href="#"><i class="mc-bn-ico ph ph-megaphone"></i><span class="mc-bn-txt">ঘোষণা</span></a></li>
+  </ul>
+</nav>
+
+<!-- ===== লাইটবক্স ===== -->
+<div id="mc-lightbox" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/90 p-4">
+  <button type="button" class="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20" data-mc-lightbox-close aria-label="বন্ধ করুন">
+    <i class="ph-bold ph-x text-xl"></i>
+  </button>
+  <img id="mc-lightbox-img" src="" alt="" class="max-h-[88vh] max-w-full rounded-lg object-contain">
+</div>
+
+<script src="site.js" defer></script>
+</body>
+</html>
