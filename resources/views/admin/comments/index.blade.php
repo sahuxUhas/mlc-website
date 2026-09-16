@@ -40,10 +40,10 @@
                 @php $item = $c->commentable; @endphp
                 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                     <td class="px-3 py-2.5"><input type="checkbox" name="ids[]" value="{{ $c->id }}" class="bulk-check h-4 w-4 rounded border-slate-300 text-[#E21D2B]"></td>
-                    <td class="px-4 py-2.5"><p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $c->name }}</p>
+                    <td class="px-4 py-2.5"><p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ $c->author_name }}</p>
                         <p class="text-[11px] text-slate-500">{{ bn_ago($c->created_at) }}</p>
-                        @if($c->email)<p class="truncate text-[10px] text-slate-400">{{ $c->email }}</p>@endif</td>
-                    <td class="px-4 py-2.5"><p class="max-w-xs line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{{ $c->comment }}</p>
+                        @if($c->guest_email)<p class="truncate text-[10px] text-slate-400">{{ $c->guest_email }}</p>@endif</td>
+                    <td class="px-4 py-2.5"><p class="max-w-xs line-clamp-2 text-xs text-slate-600 dark:text-slate-300">{{ $c->body }}</p>
                         @if($c->is_reported)<span class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-amber-600"><i class="ph ph-flag"></i> রিপোর্ট করা</span>@endif</td>
                     <td class="px-4 py-2.5 text-[11px]">@if($item)<span class="line-clamp-2 font-bold text-slate-700 dark:text-slate-300">{{ $item->title ?? '—' }}</span>@else<span class="text-slate-400">মুছে গেছে</span>@endif</td>
                     <td class="px-4 py-2.5 text-center">@php $cs=['pending'=>'bg-amber-500','approved'=>'bg-emerald-500','rejected'=>'bg-slate-500','spam'=>'bg-red-600'][$c->status]??'bg-slate-500'; @endphp
