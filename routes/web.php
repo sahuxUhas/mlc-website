@@ -27,6 +27,10 @@ Route::middleware(['mc.publish'])->group(function () {
         ->middleware('mc.trackview')->name('news.show');
     Route::get('/article/{id}', [PublicSite\NewsController::class, 'legacyRedirect']);
 
+    // নিউজ পেজ থেকে মন্তব্য রিপোর্ট (spam/abuse)
+    Route::post('/news/{slug}/report/{comment}', [PublicSite\NewsController::class, 'report'])
+        ->middleware('throttle:mc_comment')->name('news.report');
+
     // ট্যাগ
     Route::get('/tag/{slug}', [PublicSite\TagController::class, 'show'])->name('tag.show');
 

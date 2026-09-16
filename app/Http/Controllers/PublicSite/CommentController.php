@@ -65,7 +65,9 @@ class CommentController extends Controller
             $post->increment('comments_count');
         }
 
-        return back()->with('success', 'আপনার মন্তব্য জমা হয়েছে। মডারেশনের পর প্রকাশিত হবে।');
+        // নিউজ পেজের ফর্মের ঠিক পাশেই কনফার্মেশন দেখানোর জন্য নির্দিষ্ট ফ্ল্যাশ কী
+        // (লেআউটের গ্লোবাল success ফ্ল্যাশ আলাদা রাখা হয়েছে — দ্বিগুণ বার্তা দেখাবে না)
+        return back()->with('mc_comment_submitted', true);
     }
 
     /** পাঠক কর্তৃক মন্তব্য রিপোর্ট */

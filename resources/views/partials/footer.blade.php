@@ -1,6 +1,11 @@
 {{-- ===== ফুটার (ডেমোর ডিজাইন ও কালার অক্ষুণ্ণ) ===== --}}
+@php
+    // সংবাদের বিস্তারিত পেজে "বিভাগসমূহ" কলামটি দেখানো হয় না (নির্দেশনা অনুযায়ী)।
+    // ক্যাটাগরি সিস্টেম/ডাটাবেস/অ্যাডমিন অপরিবর্তিত — অন্য সব পেজে আগের মতোই থাকে।
+    $showFooterCategories = ! request()->routeIs('news.show');
+@endphp
 <footer class="mt-12 border-t border-gray-200 bg-[#0B0B0B] text-gray-300 dark:border-[#263246]">
-    <div class="container mx-auto grid grid-cols-1 gap-8 px-4 py-10 md:grid-cols-2 lg:grid-cols-4">
+    <div class="container mx-auto grid grid-cols-1 gap-8 px-4 py-10 md:grid-cols-2 {{ $showFooterCategories ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
         {{-- পরিচিতি --}}
         <div>
             <div class="mb-3 flex items-center gap-2.5">
@@ -18,15 +23,17 @@
             </p>
         </div>
 
-        {{-- বিভাগসমূহ --}}
-        <div>
-            <h3 class="mb-3 font-serif text-base font-bold text-white">বিভাগসমূহ</h3>
-            <ul class="space-y-1.5 text-sm">
-                @foreach($footerCategories ?? [] as $category)
-                    <li><a href="{{ route('category.show', $category->slug) }}" class="text-gray-400 transition-colors hover:text-[#E21D2B]">{{ $category->name }}</a></li>
-                @endforeach
-            </ul>
-        </div>
+        {{-- বিভাগসমূহ (সংবাদের বিস্তারিত পেজে দেখানো হয় না) --}}
+        @if($showFooterCategories)
+            <div>
+                <h3 class="mb-3 font-serif text-base font-bold text-white">বিভাগসমূহ</h3>
+                <ul class="space-y-1.5 text-sm">
+                    @foreach($footerCategories ?? [] as $category)
+                        <li><a href="{{ route('category.show', $category->slug) }}" class="text-gray-400 transition-colors hover:text-[#E21D2B]">{{ $category->name }}</a></li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         {{-- গুরুত্বপূর্ণ লিংক --}}
         <div>

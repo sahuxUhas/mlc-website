@@ -14,9 +14,10 @@ class CommentFactory extends Factory
         return [
             'commentable_type' => Post::class,
             'commentable_id'   => Post::factory(),
-            'name'             => fake()->name(),
-            'email'            => fake()->safeEmail(),
-            'comment'          => fake()->paragraph(),
+            // ডাটাবেস/মডেল অনুযায়ী কলামের নাম guest_name ও body
+            'guest_name'       => fake()->name(),
+            'guest_email'      => fake()->safeEmail(),
+            'body'             => fake()->paragraph(),
             'status'           => 'pending',
             'ip_address'       => fake()->ipv4(),
         ];

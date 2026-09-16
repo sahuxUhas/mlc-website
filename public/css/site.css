@@ -116,3 +116,129 @@ html.mc-lock, body.mc-lock { overflow:hidden; }
   .mc-body-pad { padding-bottom:0; }
   body { background:#fff; color:#000; }
 }
+
+/* ==========================================================================
+   NEWS DETAILS (article) পেজ — কমপ্যাক্ট শেয়ার / ফেসবুক ফলো / মন্তব্য
+   বিদ্যমান ডিজাইন টোকেন (#D50E18, #E21D2B, #1F7A3D, #0B0B0B, #0D1422, #182233,
+   #263246, #F1F5F9, #94A3B8) ও টাইপোগ্রাফি অপরিবর্তিত রেখে যোগ করা।
+   ========================================================================== */
+.mc-article { overflow-x: hidden; }
+.mc-article-shell { max-width: 46rem; }
+.mc-article-hero { max-height: 70vh; }
+.article-body { overflow-wrap: anywhere; }
+.article-body iframe, .article-body video, .article-body img { max-width: 100%; }
+.article-body table { display: block; max-width: 100%; overflow-x: auto; }
+
+/* --- সেকশন হেডিং --- */
+.mc-sec-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem .75rem; margin-bottom:.85rem; }
+.mc-sec-title { display:inline-flex; align-items:center; gap:.45rem; margin:0; font-family:'Noto Serif Bengali',serif; font-size:1rem; font-weight:700; line-height:1.5; color:#111827; }
+.dark .mc-sec-title { color:#F1F5F9; }
+.mc-sec-title i { font-size:1.05rem; }
+.mc-count { display:inline-block; min-width:1.35rem; padding:.05rem .4rem; border-radius:999px; background:#F3F4F6; color:#4B5563; font-size:11px; font-weight:700; text-align:center; }
+.dark .mc-count { background:#0D1422; color:#94A3B8; }
+
+/* --- শেয়ার সেকশন --- */
+.mc-copy-msg { display:none; font-size:11px; font-weight:700; color:#1F7A3D; }
+.dark .mc-copy-msg { color:#22C55E; }
+.mc-copy-msg.is-on { display:inline-block; animation: fadeUp .22s ease-out; }
+
+.mc-share-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem; }
+@media (min-width:420px){ .mc-share-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (min-width:900px){ .mc-share-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
+
+.mc-share-btn { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; width:100%; height:2.4rem; padding:0 .5rem;
+  border:1px solid transparent; border-radius:.7rem; font-size:12px; font-weight:700; line-height:1; color:#fff; cursor:pointer;
+  transition: transform .16s ease, filter .16s ease; }
+.mc-share-btn span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.mc-share-btn i { font-size:16px; }
+.mc-share-btn:hover { filter:brightness(.94); }
+.mc-share-btn:active { transform:scale(.97); }
+.mc-share-fb   { background:#1877F2; }
+.mc-share-msgr { background:linear-gradient(180deg,#00B2FF 0%,#006AFF 100%); }
+.mc-share-wa   { background:#25D366; }
+.mc-share-tg   { background:#229ED9; }
+.mc-share-x    { background:#0B0B0B; }
+.mc-share-copy { background:#F3F4F6; border-color:#E5E7EB; color:#0B0B0B; }
+.mc-share-copy:hover { background:#E5E7EB; filter:none; }
+.dark .mc-share-copy { background:#0D1422; border-color:#263246; color:#F1F5F9; }
+.dark .mc-share-copy:hover { background:#182233; }
+
+.mc-native-share { display:none; align-items:center; justify-content:center; gap:.4rem; width:100%; height:2.4rem; margin-top:.5rem;
+  border:1px dashed #CBD5E1; border-radius:.7rem; background:transparent; color:#374151; font-size:12.5px; font-weight:700; cursor:pointer; }
+body.mc-has-share .mc-native-share { display:inline-flex; }
+.dark .mc-native-share { border-color:#263246; color:#F1F5F9; }
+
+/* --- ফেসবুক ফলো --- */
+.mc-follow { display:flex; flex-direction:column; gap:.75rem; border:1px solid #C5E7C8; background:#EAF7EC; border-radius:1rem; padding:1rem; }
+.dark .mc-follow { background:#182233; border-color:#263246; }
+.mc-follow-text { display:flex; align-items:flex-start; gap:.6rem; min-width:0; }
+.mc-follow-text p { margin:0; font-size:13px; font-weight:600; line-height:1.8; color:#1F2937; }
+.dark .mc-follow-text p { color:#F1F5F9; }
+.mc-follow-ico { flex:0 0 auto; font-size:22px; line-height:1.2; color:#1877F2; }
+.mc-follow-btn { display:inline-flex; align-items:center; justify-content:center; gap:.45rem; align-self:flex-start; flex:0 0 auto;
+  background:#1877F2; color:#fff; font-size:13px; font-weight:700; padding:.6rem 1rem; border-radius:.7rem;
+  transition: filter .16s ease, transform .16s ease; }
+.mc-follow-btn:hover { filter:brightness(.94); }
+.mc-follow-btn:active { transform:scale(.98); }
+@media (min-width:640px){
+  .mc-follow { flex-direction:row; align-items:center; justify-content:space-between; }
+  .mc-follow-btn { align-self:center; }
+}
+
+/* --- মন্তব্য (compact) --- */
+.mc-comment-toggle { display:inline-flex; align-items:center; gap:.35rem; border:0; border-radius:.7rem; background:#D50E18;
+  color:#fff; font-size:12.5px; font-weight:700; padding:.5rem .85rem; cursor:pointer; transition: background .16s ease, transform .16s ease; }
+.mc-comment-toggle:hover { background:#B9121E; }
+.mc-comment-toggle:active { transform:scale(.98); }
+.mc-comment-toggle i { font-size:15px; }
+
+.mc-comment-form { display:none; margin-bottom:1rem; padding-bottom:1rem; border-bottom:1px solid #F3F4F6; }
+.dark .mc-comment-form { border-bottom-color:#263246; }
+.mc-comment-form.is-open { display:block; animation: fadeUp .22s ease-out; }
+
+.mc-form-label { display:block; margin-bottom:.3rem; font-size:11.5px; font-weight:700; color:#374151; }
+.dark .mc-form-label { color:#94A3B8; }
+.mc-form-input { width:100%; border:1px solid #D1D5DB; border-radius:.6rem; background:#fff; padding:.55rem .7rem; font-size:14px; color:#111827; }
+.mc-form-input:focus { outline:none; border-color:#D50E18; box-shadow:0 0 0 3px rgba(213,14,24,.15); }
+.dark .mc-form-input { background:#0D1422; border-color:#263246; color:#F1F5F9; }
+.mc-submit-btn { display:inline-flex; align-items:center; gap:.4rem; border:0; border-radius:.7rem; background:#D50E18;
+  color:#fff; font-size:13px; font-weight:700; padding:.6rem 1.1rem; cursor:pointer; transition: background .16s ease, transform .16s ease; }
+.mc-submit-btn:hover { background:#B9121E; }
+.mc-submit-btn:active { transform:scale(.98); }
+
+.mc-note-ok { display:flex; align-items:flex-start; gap:.5rem; margin-bottom:.9rem; border:1px solid #C5E7C8; background:#EAF7EC;
+  border-radius:.7rem; padding:.6rem .8rem; font-size:12.5px; font-weight:700; line-height:1.8; color:#1F7A3D; }
+.mc-note-ok i { margin-top:.15rem; font-size:15px; }
+.dark .mc-note-ok { background:#182233; border-color:#263246; color:#22C55E; }
+.mc-errors { margin-bottom:.9rem; border:1px solid #FECACA; background:#FEF2F2; border-radius:.7rem; padding:.6rem .8rem; font-size:12.5px; font-weight:600; color:#991B1B; }
+.mc-errors ul { margin:0; padding-left:1rem; list-style:disc; }
+.dark .mc-errors { background:#182233; border-color:#7F1D1D; color:#FCA5A5; }
+
+.mc-comment { display:flex; gap:.7rem; padding:.85rem 0; border-top:1px solid #F3F4F6; }
+.mc-comment:first-child { border-top:0; padding-top:0; }
+.mc-comment.is-reply { gap:.5rem; border-top:0; padding:.45rem 0 0; }
+.dark .mc-comment { border-top-color:#263246; }
+.mc-comment-avatar { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem;
+  border:1px solid #C5E7C8; border-radius:999px; background:#EAF7EC; color:#1F7A3D; font-family:'Noto Serif Bengali',serif; font-size:16px; font-weight:800; }
+.dark .mc-comment-avatar { background:#0D1422; border-color:#263246; color:#22C55E; }
+.mc-comment-main { flex:1; min-width:0; }
+.mc-comment-meta { display:flex; flex-wrap:wrap; align-items:center; gap:.2rem .6rem; }
+.mc-comment-name { font-size:13.5px; font-weight:700; color:#111827; overflow-wrap:anywhere; }
+.dark .mc-comment-name { color:#F1F5F9; }
+.mc-comment-time { display:inline-flex; align-items:center; gap:.2rem; font-size:11px; color:#6B7280; }
+.dark .mc-comment-time { color:#94A3B8; }
+.mc-comment-body { margin-top:.25rem; font-size:14px; line-height:1.9; color:#374151; white-space:pre-line; overflow-wrap:anywhere; }
+.dark .mc-comment-body { color:#F1F5F9; }
+.mc-comment-report { margin-top:.15rem; }
+.mc-comment-report button { border:0; background:none; padding:0; font-size:11px; font-weight:600; color:#9CA3AF; cursor:pointer; }
+.mc-comment-report button:hover { color:#D50E18; }
+.mc-comment-replies { margin-top:.6rem; padding-left:.85rem; border-left:2px solid #E5E7EB; }
+.dark .mc-comment-replies { border-left-color:#263246; }
+.mc-comments { margin-top:.35rem; }
+.mc-empty { margin:0; padding:.9rem 0; text-align:center; font-size:13px; color:#6B7280; }
+.dark .mc-empty { color:#94A3B8; }
+
+@media (max-width:400px){
+  .mc-share-btn { font-size:11.5px; }
+  .mc-share-btn i { font-size:15px; }
+}

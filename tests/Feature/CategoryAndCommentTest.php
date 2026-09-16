@@ -53,12 +53,28 @@ class CategoryAndCommentTest extends TestCase
         $this->post('/comments', [
             'commentable_type' => 'post',
             'commentable_id'   => $post->id,
-            'name'             => 'রহিম উদ্দিন',
-            'comment'          => 'চমৎকার প্রতিবেদন, ধন্যবাদ।',
+            'guest_name'       => 'রহিম উদ্দিন',
+            'body'             => 'চমৎকার প্রতিবেদন, ধন্যবাদ।',
         ]);
 
-        // নতুন মন্তব্য ডিফল্টভাবে pending থাকে
-        $this->assertDatabaseHas('comments', ['name' => 'রহিম উদ্দিন', 'status' => 'pending']);
+        // নতুন মন্তব্য ডিফল্টভাবে pending থাকে (মডারেশনের অপেক্ষায়)
+        $this->assertDatabaseHas('comments', ['guest_name' => 'রহিম উদ্দিন', 'status' => 'pending']);
+    }
+
+    public function test_comment_submission_shows_moderation_confirmation(): void
+    {
+        $post = Post::factory()->create();
+
+        $this->post('/comments', [
+            'commentable_type' => 'post',
+            'commentable_id'   => $post->id,
+            'guest_name'       => 'রহিম উদ্দিন',
+            'body'             => 'মন্তব্য পাঠানোর কনফার্মেশন যাচাই।',
+        ])->assertRedirect();
+
+        $this->get('/news/'.$post->slug)
+            ->assertOk()
+            ->assertSee('আপনার মন্তব্য পর্যালোচনার জন্য পাঠানো হয়েছে।');
     }
 
     public function test_comment_requires_name_and_body(): void
@@ -66,15 +82,69 @@ class CategoryAndCommentTest extends TestCase
         $post = Post::factory()->create();
 
         $this->post('/comments', ['commentable_type' => 'post', 'commentable_id' => $post->id])
-            ->assertSessionHasErrors(['name', 'comment']);
+            ->assertSessionHasErrors(['guest_name', 'body']);
+
+        // খুব ছোট নাম/মন্তব্য এবং সীমার বেশি দৈর্ঘ্যও প্রত্যাখ্যাত হয়
+        $this->post('/comments', [
+            'commentable_type' => 'post',
+            'commentable_id'   => $post->id,
+            'guest_name'       => 'অ',
+            'body'             => 'ঠিক',
+        ])->assertSessionHasErrors(['guest_name', 'body']);
+
+        $this->post('/comments', [
+            'commentable_type' => 'post',
+            'commentable_id'   => $post->id,
+            'guest_name'       => str_repeat('ক', 61),
+            'body'             => str_repeat('খ', 2001),
+        ])->assertSessionHasErrors(['guest_name', 'body']);
     }
 
-    public function test_pending_comment_is_not_shown_publicly(): void
+    public function test_comment_body_is_stored_without_html_injection(): void
     {
         $post = Post::factory()->create();
-        Comment::factory()->create(['commentable_id' => $post->id, 'status' => 'pending']);
 
-        $this->get('/news/'.$post->slug)->assertOk()->assertDontSee('চমৎকার');
+        $this->post('/comments', [
+            'commentable_type' => 'post',
+            'commentable_id'   => $post->id,
+            'guest_name'       => 'রহিম উদ্দিন',
+            'body'             => '<script>alert(1)</script> মন্তব্য',
+        ]);
+
+        $comment = Comment::where('commentable_id', $post->id)->firstOrFail();
+        $comment->update(['status' => 'approved']);
+
+        // মার্কআপ হিসেবে রেন্ডার হবে না — এস্কেপ হয়ে প্লেইন টেক্সট হিসেবে দেখাবে
+        $this->get('/news/'.$post->slug)
+            ->assertOk()
+            ->assertDontSee('<script>alert(1)</script>', false)
+            ->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false);
+    }
+
+    public function test_only_approved_comments_are_shown_publicly(): void
+    {
+        $post = Post::factory()->create();
+        Comment::factory()->create(['commentable_id' => $post->id, 'body' => 'অননুমোদিত মন্তব্য পাঠ', 'status' => 'pending']);
+        Comment::factory()->create(['commentable_id' => $post->id, 'body' => 'প্রত্যাখ্যাত মন্তব্য পাঠ', 'status' => 'rejected']);
+        Comment::factory()->create(['commentable_id' => $post->id, 'body' => 'স্প্যাম মন্তব্য পাঠ', 'status' => 'spam']);
+
+        $this->get('/news/'.$post->slug)
+            ->assertOk()
+            ->assertDontSee('অননুমোদিত মন্তব্য পাঠ')
+            ->assertDontSee('প্রত্যাখ্যাত মন্তব্য পাঠ')
+            ->assertDontSee('স্প্যাম মন্তব্য পাঠ')
+            ->assertSee('এখনও কোনো মন্তব্য নেই। প্রথম মন্তব্যটি করুন।');
+    }
+
+    public function test_approved_comment_is_shown_publicly(): void
+    {
+        $post = Post::factory()->create();
+        Comment::factory()->approved()->create(['commentable_id' => $post->id, 'body' => 'অভিনন্দন ও শুভেচ্ছা পাঠ।']);
+
+        $this->get('/news/'.$post->slug)
+            ->assertOk()
+            ->assertSee('অভিনন্দন ও শুভেচ্ছা পাঠ।')
+            ->assertDontSee('এখনও কোনো মন্তব্য নেই।');
     }
 
     public function test_moderator_can_approve_a_comment(): void

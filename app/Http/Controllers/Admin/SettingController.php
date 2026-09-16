@@ -33,6 +33,8 @@ class SettingController extends Controller
         ],
         'social' => [
             ['key' => 'social_facebook','label' => 'ফেসবুক URL',        'type' => 'text'],
+            // (ঐচ্ছিক) ডেস্কটপে Messenger শেয়ার ডায়ালগের জন্য — খালি রাখলে মোবাইলে deep-link/লিংক কপি ব্যবহৃত হয়
+            ['key' => 'facebook_app_id','label' => 'ফেসবুক App ID (Messenger শেয়ার)', 'type' => 'text'],
             ['key' => 'social_youtube', 'label' => 'ইউটিউব URL',        'type' => 'text'],
             ['key' => 'social_twitter', 'label' => 'টুইটার / X URL',    'type' => 'text'],
             ['key' => 'social_instagram','label'=> 'ইনস্টাগ্রাম URL',   'type' => 'text'],
