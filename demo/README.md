@@ -5,12 +5,42 @@
 > যা `public/css/*` ও `public/js/site.js` (সাইটের আসল ফাইল) ব্যবহার করে।
 > রিভিউ শেষে ফোল্ডারটি ডিলিট করা যায় — অ্যাপে কোনো প্রভাব পড়বে না।
 
-## কেন Workers-এ Laravel চলেনি
+## Cloudflare Workers build কেন fail করছিল — এবং কীভাবে ঠিক হলো
 
-Cloudflare **Workers**-এর রানটাইম JavaScript/WASM — PHP (Laravel 11), MySQL,
-Blade, `storage/` কিছুই চলে না। তাই repo-র সাথে Workers Git integration লাগালে
-প্রতিটি push-এ build fail দেখাবে (কোডের সমস্যা নয়, প্ল্যাটফর্মের সীমা)।
-Laravel চালাতে হবে PHP-সাপোর্টেড হোস্টে (cPanel / Render / Railway / VPS)।
+আগের এরর (ডিপ্লয় লগ থেকে):
+
+```
+Installing project dependencies: npm clean-install      ✓
+Executing user deploy command: npx wrangler versions upload
+✘ [ERROR] Missing entry-point to Worker script or to assets directory
+Failed: error occurred while running deploy command
+```
+
+কারণ: repo-তে `wrangler.jsonc`/`wrangler.toml` ছিল না, তাই wrangler জানত না
+কী আপলোড করতে হবে। **সমাধান:** root-এ যোগ করা হয়েছে —
+
+```json
+{ "name": "mlc-website", "compatibility_date": "2026-09-15",
+  "assets": { "directory": "./demo" } }
+```
+
+এটি একটি **assets-only Worker** — কোনো worker script চালায় না, শুধু `demo/`
+ফোল্ডারটা স্ট্যাটিক ফাইল হিসেবে সার্ভ করে। ফলে আগের `npx wrangler versions upload`
+কমান্ডটাই এখন সফল হবে এবং ডেমো পাওয়া যাবে:
+
+```
+https://mlc-website.<your-subdomain>.workers.dev
+```
+
+> ⚠️ মনে রাখবেন: এতে Cloudflare-এ যা চলবে তা এই **স্ট্যাটিক ডেমো** — Laravel অ্যাপ নয়।
+> Cloudflare Workers-এর রানটাইম JavaScript/WASM; PHP (Laravel 11), MySQL, Blade,
+> `storage/` কিছুই চলে না। আসল অ্যাপের জন্য PHP-সাপোর্টেড হোস্ট দরকার
+> (cPanel / Render / Railway / VPS)। এই ডেমো রিভিউ শেষ হলে `wrangler.json` ও
+> `demo/` ফোল্ডার ডিলিট করলেই অ্যাপে কোনো প্রভাব পড়বে না।
+>
+> যদি `mlc-website` নামের Worker-টি আগে থেকে অন্য কিছু সার্ভ করত, তাহলে এই deploy
+> সেটি প্রতিস্থাপন করবে — সেক্ষেত্রে Worker-এর নাম বদলে দিন বা নিচের
+> Pages পদ্ধতি ব্যবহার করুন।
 
 ## ১) Cloudflare Pages-এ এই ডেমো (PHP ছাড়াই, ২ মিনিট)
 
