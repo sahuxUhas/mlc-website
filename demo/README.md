@@ -42,6 +42,24 @@ https://mlc-website.<your-subdomain>.workers.dev
 > সেটি প্রতিস্থাপন করবে — সেক্ষেত্রে Worker-এর নাম বদলে দিন বা নিচের
 > Pages পদ্ধতি ব্যবহার করুন।
 
+### ⚠️ গুরুত্বপূর্ণ: production Worker এখনো পুরোনো legacy ডেমো সার্ভ করছে
+
+এই ব্রাঞ্চের build শুধু একটি **preview version** আপলোড করেছে (উপরে Preview URL),
+তাই `https://mlc-website.sahuxuhas.workers.dev/` — অর্থাৎ production — এখনো
+`legacy-demo/index.html` ভিত্তিক পুরোনো সম্পূর্ণ-সাইট ডেমো দেখাচ্ছে।
+
+Cloudflare Workers Builds-এ production শাখা সাধারণত `main`। তাই **এই PR main-এ
+merge হলে** পরবর্তী build-এ production version-ও `demo/` দিয়ে প্রতিস্থাপিত হবে
+(অর্থাৎ `mlc-website.sahuxuhas.workers.dev` আর পুরোনো ডেমো নয়, নতুন Article পেজ
+দেখাবে)। যদি সেটি না চান — merge-এর আগে নিচের যেকোনো একটি করুন:
+
+1. Cloudflare Dashboard → Workers & Pages → `mlc-website` → Settings → Builds →
+   production branch নিয়ন্ত্রণ করে শুধু নির্দিষ্ট শাখায় deploy সীমিত করুন, অথবা
+2. merge-এর আগে `wrangler.json` ও `demo/` সরিয়ে দিন (তবে Workers check আবার
+   লাল দেখাবে — অ্যাপের কিছু ক্ষতি হবে না), অথবা
+3. `wrangler.json`-এ ভিন্ন `name` (যেমন `mlc-website-demo`) দিয়ে আলাদা Worker
+   বানান — তখন Workers Builds-এর সাথে নাম মিলিয়ে নিতে হবে।
+
 ## ১) Cloudflare Pages-এ এই ডেমো (PHP ছাড়াই, ২ মিনিট)
 
 **CLI (সবচেয়ে সহজ):**
