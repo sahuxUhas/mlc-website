@@ -48,6 +48,11 @@ class SettingSeeder extends Seeder
         Setting::put('comments_auto_approve', '0', 'bool', 'behavior');
         Setting::put('site_maintenance', '0', 'bool', 'behavior');
 
+        // ImgBB Settings - user provided key
+        Setting::put('imgbb_api_key', '4bfac8cf6fa4714236c08292299d2862', 'string', 'media');
+        Setting::put('imgbb_enabled', '1', 'bool', 'media');
+        Setting::put('imgbb_expiration', '0', 'string', 'media'); // 0 = never expire
+
         Setting::flushCache();
     }
 }

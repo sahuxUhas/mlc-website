@@ -3,9 +3,27 @@
 @section('content')
 <x-admin.page-head title="মিডিয়া লাইব্রেরি" subtitle="ছবি ও ডকুমেন্ট আপলোড, সার্চ, কপি-URL ও ডিলিট" />
 
+{{-- ImgBB Status --}}
+@if($imgbbEnabled ?? false)
+<div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-900/20">
+    <div class="flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+        <i class="ph-fill ph-cloud-arrow-up text-lg"></i> ImgBB সক্রিয় আছে
+        <span class="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] text-white">API: {{ $imgbbKey ?? '' }}</span>
+        <span class="text-[11px] font-normal text-emerald-600 dark:text-emerald-400">ছবি এখন ImgBB তে আপলোড হবে (i.ibb.co)</span>
+    </div>
+</div>
+@else
+<div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+    <div class="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300">
+        <i class="ph ph-warning-circle text-lg"></i> ImgBB বন্ধ আছে
+        <span class="text-[11px] font-normal">.env এ IMGBB_API_KEY=4bfac8cf6fa4714236c08292299d2862 ও IMGBB_ENABLED=true সেট করুন, অথবা সেটিংস → মিডিয়া ও ImgBB থেকে চালু করুন</span>
+    </div>
+</div>
+@endif
+
 {{-- আপলোড কার্ড --}}
 <div class="mc-card mb-5 p-4">
-    <h2 class="mb-3 flex items-center gap-2 font-serif text-sm font-bold text-slate-900 dark:text-white"><i class="ph ph-cloud-arrow-up text-[#E21D2B]"></i> নতুন আপলোড</h2>
+    <h2 class="mb-3 flex items-center gap-2 font-serif text-sm font-bold text-slate-900 dark:text-white"><i class="ph ph-cloud-arrow-up text-[#E21D2B]"></i> নতুন আপলোড @if($imgbbEnabled ?? false) <span class="rounded-full bg-[#1877F2] px-2 py-0.5 text-[10px] text-white">ImgBB</span> @endif</h2>
     <form action="{{ route('admin.media.store') }}" method="POST" enctype="multipart/form-data" class="space-y-3">
         @csrf
         <div data-dropzone="#mediaFiles" class="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center hover:border-[#E21D2B] hover:bg-red-50/40 dark:border-slate-700 dark:bg-slate-800/40">
@@ -23,8 +41,8 @@
 </div>
 
 {{-- পরিসংখ্যান --}}
-<div class="mb-4 grid grid-cols-3 gap-3">
-    @foreach([['ph-files','মোট ফাইল',$stats['total']],['ph-image-square','ছবি',$stats['images']],['ph-hard-drives','মোট সাইজ',number_format($stats['size']/1048576,2).' MB']] as [$ic,$lbl,$val])
+<div class="mb-4 grid grid-cols-4 gap-3">
+    @foreach([['ph-files','মোট ফাইল',$stats['total']],['ph-image-square','ছবি',$stats['images']],['ph-hard-drives','মোট সাইজ',number_format($stats['size']/1048576,2).' MB'],['ph-cloud','ImgBB',($stats['imgbb'] ?? 0).' টি']] as [$ic,$lbl,$val])
         <div class="mc-card p-3 text-center"><i class="ph {{ $ic }} text-lg text-[#E21D2B]"></i>
             <p class="mt-1 font-serif text-base font-bold text-slate-900 dark:text-white">{{ $val }}</p><p class="text-[11px] text-slate-500">{{ $lbl }}</p></div>
     @endforeach
@@ -39,6 +57,9 @@
     @forelse($media as $m)
         <div class="mc-card group overflow-hidden p-0">
             <div class="relative aspect-square bg-slate-100 dark:bg-slate-800">
+                @if($m->disk === 'imgbb')
+                    <span class="absolute left-1.5 top-1.5 z-10 rounded-full bg-[#1877F2] px-1.5 py-0.5 text-[9px] font-bold text-white">ImgBB</span>
+                @endif
                 @if($m->is_image)
                     <img src="{{ mc_image($m->path) }}" alt="{{ $m->alt_text }}" loading="lazy" class="h-full w-full object-cover">
                 @else

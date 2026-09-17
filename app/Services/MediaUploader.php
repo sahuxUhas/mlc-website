@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\MessageBag;
 use Illuminate\Validation\ValidationException;
+use App\Services\ImgbbService;
 
 /**
  * সিকিউর ফাইল আপলোড সার্ভিস — মিডিয়া লাইব্রেরি, নিউজ, গ্যালারি,
@@ -34,12 +35,21 @@ class MediaUploader
     /** সংযুক্তি (ই-পেপার/রিপোর্ট) এর জন্য */
     public const DOC_MIMES = ['pdf' => 'application/pdf'];
 
+    private ImgbbService $imgbb;
+
     public function __construct(private string $disk = 'uploads')
     {
+        $this->imgbb = new ImgbbService();
+    }
+
+    public function isImgbbEnabled(): bool
+    {
+        return $this->imgbb->isEnabled();
     }
 
     /**
      * ফাইল যাচাই করে নিরাপদে সংরক্ষণ করে ও Media রেকর্ড তৈরি করে।
+     * যদি ImgBB চালু থাকে এবং ছবি হয়, তাহলে ImgBB তে আপলোড হবে।
      *
      * @throws ValidationException ভ্যালিডেশন ব্যর্থ হলে (ব্যবহারকারী-বান্ধব বার্তা)
      */
@@ -48,8 +58,41 @@ class MediaUploader
         $this->validate($file, $allowed);
 
         $extension = strtolower($file->getClientOriginalExtension());
+        $isImage = str_starts_with((string) $file->getMimeType(), 'image/');
 
-        // দৈবচয়নমূলক, অনুমান-অযোগ্য ফাইলনাম
+        // ImgBB তে আপলোড (যদি চালু থাকে এবং ছবি হয়, PDF নয়)
+        if ($isImage && $this->imgbb->isEnabled() && $extension !== 'pdf') {
+            try {
+                $result = $this->imgbb->upload($file, $this->cleanOriginalName($file->getClientOriginalName()));
+
+                return Media::create([
+                    'file_name'   => $this->cleanOriginalName($file->getClientOriginalName()),
+                    'disk'        => 'imgbb',
+                    'path'        => $result['display_url'] ?: $result['url'], // full URL stored
+                    'mime_type'   => $file->getMimeType(),
+                    'extension'   => $extension,
+                    'size'        => $result['size'] ?? $file->getSize() ?: 0,
+                    'width'       => $result['width'],
+                    'height'      => $result['height'],
+                    'uploaded_by' => auth()->id(),
+                ]);
+            } catch (\Throwable $e) {
+                // ImgBB ব্যর্থ হলে লোকাল ফলব্যাক (লগ করে)
+                \Illuminate\Support\Facades\Log::warning('ImgBB failed, fallback to local', ['error' => $e->getMessage()]);
+                // যদি ValidationException হয় এবং সেটা API key বা ImgBB error হয়, তাহলে throw করি
+                if ($e instanceof ValidationException) {
+                    // যদি API key missing না হয়, ফলব্যাক করি; না হলে throw
+                    $msg = $e->getMessage();
+                    if (str_contains($msg, 'API key') || str_contains($msg, 'ImgBB API error')) {
+                        // API key সমস্যা হলে সরাসরি দেখাই
+                        throw $e;
+                    }
+                }
+                // otherwise fallback to local below
+            }
+        }
+
+        // লোকাল আপলোড (ফলব্যাক)
         $name = Str::lower(Str::random(24)).'-'.now()->timestamp.'.'.$extension;
 
         $path = trim($folder, '/').'/'.$name;
@@ -58,7 +101,7 @@ class MediaUploader
 
         $width = null;
         $height = null;
-        if (str_starts_with((string) $file->getMimeType(), 'image/')) {
+        if ($isImage) {
             $dims = @getimagesize($file->getRealPath());
             if ($dims !== false) {
                 [$width, $height] = $dims;
@@ -139,10 +182,15 @@ class MediaUploader
         return mb_substr(trim((string) $name), 0, 180) ?: 'file';
     }
 
-    /** Media রেকর্ড ও ডিস্কের ফাইল — দুটোই মুছে ফেলা */
+    /** Media রেকর্ড ও ডিস্কের ফাইল — দুটোই মুছে ফেলা (ImgBB হলে শুধু DB থেকে) */
     public function delete(Media $media): void
     {
-        Storage::disk($media->disk ?: $this->disk)->delete($media->path);
+        if ($media->disk === 'imgbb') {
+            // ImgBB তে delete API আলাদা, delete_url দিয়ে করতে হয়, আপাতত শুধু DB থেকে মুছি
+            // TODO: ImgBB delete_url কল করা যেতে পারে
+        } else {
+            Storage::disk($media->disk ?: $this->disk)->delete($media->path);
+        }
         $media->delete();
     }
 

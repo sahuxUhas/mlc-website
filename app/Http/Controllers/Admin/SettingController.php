@@ -49,6 +49,11 @@ class SettingController extends Controller
             ['key' => 'comments_enabled',    'label' => 'মন্তব্য চালু',       'type' => 'bool'],
             ['key' => 'site_maintenance',    'label' => 'মেইনটেন্যান্স মোড',   'type' => 'bool'],
         ],
+        'media' => [
+            ['key' => 'imgbb_enabled', 'label' => 'ImgBB আপলোড চালু (ছবি ImgBB তে যাবে)', 'type' => 'bool'],
+            ['key' => 'imgbb_api_key', 'label' => 'ImgBB API Key', 'type' => 'text', 'hint' => 'আপনার API Key: 4bfac8cf6fa4714236c08292299d2862 - https://api.imgbb.com/ থেকে নেওয়া'],
+            ['key' => 'imgbb_expiration', 'label' => 'ImgBB Expiration (সেকেন্ড, 0 = never)', 'type' => 'text', 'hint' => '0 রাখলে ছবি কখনো ডিলিট হবে না'],
+        ],
         'integrations' => [
             ['key' => 'analytics_code', 'label' => 'Google Analytics কোড', 'type' => 'textarea'],
             ['key' => 'custom_head_html','label'=> 'কাস্টম Head HTML',     'type' => 'textarea'],
