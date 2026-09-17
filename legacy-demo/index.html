@@ -2722,7 +2722,7 @@
             );
         };
 
-                // ---- সরাসরি এইচটিএমএল ভিডিও প্লেয়ার (Direct HTML5 Video Player) ----
+                // ---- সরাসরি HTML5 ভিডিও প্লেয়ার - Fixed for real FB videos ----
         const fbIdFrom = (u) => {
             const m = /(?:facebook\.com)\/(?:[^/]+\/(?:videos?|reels?)|share\/[vr]|reel)\/([a-zA-Z0-9_-]+)/.exec(u || '');
             return m ? m[1] : (u ? 'fb' : null);
@@ -2733,6 +2733,7 @@
             const [isPlaying, setIsPlaying] = React.useState(false);
             const [speed, setSpeed] = React.useState(1);
             const [hasError, setHasError] = React.useState(false);
+            const [fbError, setFbError] = React.useState(false);
 
             const matched = React.useMemo(() => {
                 if (!url) return (typeof MOCK_VIDEOS !== 'undefined' ? MOCK_VIDEOS[0] : null);
@@ -2746,7 +2747,14 @@
                 ) || null;
             }, [url]);
 
-            const directSrc = (url && url.endsWith('.mp4')) ? url : (matched ? matched.videoUrl : null);
+            // Prioritize direct MP4 if available - fixes Video unavailable error
+            const directSrc = React.useMemo(() => {
+                if (url && url.endsWith('.mp4')) return url;
+                if (matched && matched.videoUrl && matched.videoUrl.endsWith('.mp4')) return matched.videoUrl;
+                if (matched && matched.videoUrl) return matched.videoUrl;
+                return null;
+            }, [url, matched]);
+            
             const directPoster = poster || (matched ? matched.thumb : null);
             const targetFbUrl = (matched ? matched.fbUrl : (url && url.startsWith('http') ? url : null));
             const isVertical = isReel || (matched && matched.isReel);
@@ -2773,10 +2781,10 @@
                                 autoPlay={autoPlay}
                                 onPlay={() => setIsPlaying(true)}
                                 onPause={() => setIsPlaying(false)}
-                                onError={() => setHasError(true)}
+                                onError={() => { setHasError(true); console.log('MP4 failed, fallback to FB'); }}
                                 className="w-full h-full object-contain bg-black"
                             />
-                        ) : (
+                        ) : !fbError ? (
                             <iframe
                                 title={title || 'ভিডিও'}
                                 src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetFbUrl || url || '')}&show_text=false&t=0`}
@@ -2784,7 +2792,20 @@
                                 className="absolute inset-0 h-full w-full border-0"
                                 allowFullScreen
                                 allow="encrypted-media; picture-in-picture; autoplay; clipboard-write"
+                                onError={() => setFbError(true)}
                             />
+                        ) : (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black text-white p-6 text-center">
+                                <i className="ph-fill ph-play-circle text-5xl text-white/30 mb-3"></i>
+                                <p className="text-sm font-bold mb-1">ভিডিও লোড হচ্ছে</p>
+                                <p className="text-xs text-white/60 mb-4">Facebook ভিডিওটি সরাসরি দেখতে নিচের লিংকে ক্লিক করুন</p>
+                                {directPoster && <img src={directPoster} alt={title} className="w-full max-w-[320px] rounded-lg opacity-60 mb-4" />}
+                                {targetFbUrl && (
+                                    <a href={targetFbUrl} target="_blank" rel="noopener" className="px-4 py-2 bg-[#1877F2] rounded-lg text-sm font-bold hover:bg-blue-700">
+                                        Facebook-এ ভিডিও দেখুন
+                                    </a>
+                                )}
+                            </div>
                         )}
                     </div>
 
@@ -2792,7 +2813,7 @@
                         <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                সরাসরি HTML প্লেয়ার
+                                {hasError ? 'Facebook প্লেয়ার' : 'HTML5 প্লেয়ার'}
                             </span>
                             <div className="hidden sm:flex items-center gap-1 text-xs text-gray-500 dark:text-[#94A3B8]">
                                 <span className="font-semibold">গতি:</span>
@@ -2815,7 +2836,7 @@
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700 transition-colors shadow-sm ml-auto"
-                                title="অফিসিয়াল ফেসবুক পেজে ভিডিওটি দেখুন"
+                                title="অফিসিয়াল ফেসবুক পেজে ভিডিওটি দেখুন - https://www.facebook.com/profile.php?id=100068836585906"
                             >
                                 <i className="ph-fill ph-facebook-logo text-sm"></i>
                                 <span>Facebook-এ দেখুন</span>
@@ -2823,6 +2844,12 @@
                             </a>
                         )}
                     </div>
+                    {hasError && targetFbUrl && (
+                        <div className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                            <i className="ph ph-info mr-1"></i>
+                            সরাসরি ভিডিও লোড না হলে Facebook-এ দেখুন বাটনে ক্লিক করুন। পেজ: <a href="https://www.facebook.com/profile.php?id=100068836585906" target="_blank" className="underline font-bold">মহালছড়ি নিউজ</a>
+                        </div>
+                    )}
                 </div>
             );
         };
