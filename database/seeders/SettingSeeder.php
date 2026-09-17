@@ -26,8 +26,9 @@ class SettingSeeder extends Seeder
         foreach ($general as $k => $v) { Setting::put($k, $v, 'string', 'general'); }
 
         $social = [
-            'social_facebook' => 'https://www.facebook.com/mahalcharinews',
-            'social_youtube' => '', 'social_twitter' => '', 'social_instagram' => '',
+            'social_facebook' => 'https://www.facebook.com/profile.php?id=100068836585906',
+            'social_youtube' => 'https://www.youtube.com/@mahalcharinews',
+            'social_twitter' => '', 'social_instagram' => '',
             'social_whatsapp' => '+8801711234567',
         ];
         foreach ($social as $k => $v) { Setting::put($k, $v, 'string', 'social'); }
