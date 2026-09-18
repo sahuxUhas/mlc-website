@@ -27,7 +27,6 @@
 
 @section('content')
 <div class="container mx-auto max-w-3xl px-3 py-6 sm:px-4 md:py-8" id="article-page">
-    {{-- Breadcrumb --}}
     <nav class="mb-5 flex flex-wrap items-center gap-1.5 text-sm text-gray-500 dark:text-[#94A3B8]" aria-label="ব্রেডক্রাম্ব">
         <a href="{{ route('home') }}" class="hover:text-[#D50E18] dark:hover:text-[#22C55E] flex items-center gap-1"><i class="ph ph-house"></i> হোম</a>
         @if($post->category)
@@ -73,17 +72,17 @@
         </section>
     @endif
 
-    {{-- 3 Buttons in same row: Share (native), Copy Link, Comment - no emoji, direct icons, no custom modal --}}
+    {{-- 3 Buttons always same line, no wrap, responsive small --}}
     <div class="mt-8 border-t border-gray-200 dark:border-[#263246] pt-6">
-        <div class="flex flex-wrap items-center gap-2.5">
-            <button type="button" id="mc-share-btn" class="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
-                <i class="ph ph-share-network text-base"></i> শেয়ার করুন
+        <div class="flex flex-nowrap items-center gap-1.5 sm:gap-2.5 w-full">
+            <button type="button" id="mc-share-btn" class="flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full bg-gray-900 px-2.5 py-2 text-[11px] font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2">
+                <i class="ph ph-share-network text-[13px] sm:text-base"></i> <span class="truncate">শেয়ার</span>
             </button>
-            <button type="button" id="mc-copy-btn" class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-                <i class="ph ph-link text-base"></i> কপি লিংক
+            <button type="button" id="mc-copy-btn" class="flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-white px-2.5 py-2 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2">
+                <i class="ph ph-link text-[13px] sm:text-base"></i> <span class="truncate">লিংক</span>
             </button>
-            <button type="button" id="mc-comment-jump" class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-                <i class="ph ph-chat-circle text-base"></i> মন্তব্য করুন @if($post->comments->count()) <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{{ bn_count($post->comments->count()) }}</span> @endif
+            <button type="button" id="mc-comment-jump" class="flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-white px-2.5 py-2 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2">
+                <i class="ph ph-chat-circle text-[13px] sm:text-base"></i> <span class="truncate">মন্তব্য @if($post->comments->count()) <span class="ml-0.5 rounded-full bg-gray-100 px-1 py-0.5 text-[9px] dark:bg-gray-700">{{ bn_count($post->comments->count()) }}</span> @endif</span>
             </button>
         </div>
     </div>
@@ -177,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (navigator.share) {
                 navigator.share({ title: title, url: url }).catch(() => {});
             } else {
-                // No custom modal per requirement - fallback to copy on desktop
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(url).then(() => {
                         if (typeof mcToast !== 'undefined') mcToast('✓ নিউজ লিংক কপি হয়েছে');

@@ -2990,21 +2990,20 @@
 
                     {/* Share / Copy / Comment - 3 buttons in same row, native share only */}
                     <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <div className="flex flex-wrap items-center gap-2.5">
+                        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2.5 w-full">
                             <button onClick={() => {
                                 const url = typeof window !== 'undefined' ? window.location.href : '';
                                 if (navigator.share) {
                                     navigator.share({ title: n.title, url: url }).catch(() => {});
                                 } else {
-                                    // Fallback: copy link if native share not available (no custom modal)
                                     try {
                                         if (navigator.clipboard && navigator.clipboard.writeText) {
                                             navigator.clipboard.writeText(url).then(() => mcToast('✓ নিউজ লিংক কপি হয়েছে')).catch(() => {});
                                         }
                                     } catch (e) {}
                                 }
-                            }} className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
-                                <i className="ph ph-share-network text-base"></i> শেয়ার করুন
+                            }} className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full bg-gray-900 px-2.5 py-2 text-[11px] font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2">
+                                <i className="ph ph-share-network text-[13px] sm:text-base"></i> <span className="truncate">শেয়ার</span>
                             </button>
                             <button onClick={() => {
                                 const url = typeof window !== 'undefined' ? window.location.href : '';
@@ -3016,14 +3015,14 @@
                                         const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok();
                                     }
                                 } catch (e) { ok(); }
-                            }} className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold transition-colors ${copyDone ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
-                                <i className={`ph ${copyDone ? 'ph-check' : 'ph-link'} text-base`}></i> কপি লিংক
+                            }} className={`flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full border px-2.5 py-2 text-[11px] font-bold transition-colors whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2 ${copyDone ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                                <i className={`ph ${copyDone ? 'ph-check' : 'ph-link'} text-[13px] sm:text-base`}></i> <span className="truncate">{copyDone ? 'কপি' : 'লিংক'}</span>
                             </button>
                             <button onClick={() => {
                                 setShowCommentForm(true);
                                 setTimeout(() => { if (commentFormRef.current) commentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
-                            }} className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-                                <i className="ph ph-chat-circle text-base"></i> মন্তব্য করুন {comments.length > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{toBanglaNum(comments.length)}</span>}
+                            }} className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 rounded-full border border-gray-300 bg-white px-2.5 py-2 text-[11px] font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors whitespace-nowrap sm:px-4 sm:py-2.5 sm:text-sm sm:gap-2">
+                                <i className="ph ph-chat-circle text-[13px] sm:text-base"></i> <span className="truncate">মন্তব্য {comments.length > 0 && <span className="ml-0.5 rounded-full bg-gray-100 px-1 py-0.5 text-[9px] dark:bg-gray-700">{toBanglaNum(comments.length)}</span>}</span>
                             </button>
                         </div>
                     </div>
