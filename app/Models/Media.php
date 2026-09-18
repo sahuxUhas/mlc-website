@@ -28,7 +28,16 @@ class Media extends Model
 
     public function getUrlAttribute(): string
     {
+        // ImgBB হলে path ইতিমধ্যে full URL
+        if ($this->disk === 'imgbb' && filter_var($this->path, FILTER_VALIDATE_URL)) {
+            return $this->path;
+        }
         return mc_image($this->path);
+    }
+
+    public function getIsImgbbAttribute(): bool
+    {
+        return $this->disk === 'imgbb';
     }
 
     public function getHumanSizeAttribute(): string

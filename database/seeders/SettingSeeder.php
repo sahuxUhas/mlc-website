@@ -26,8 +26,9 @@ class SettingSeeder extends Seeder
         foreach ($general as $k => $v) { Setting::put($k, $v, 'string', 'general'); }
 
         $social = [
-            'social_facebook' => 'https://www.facebook.com/mahalcharinews',
-            'social_youtube' => '', 'social_twitter' => '', 'social_instagram' => '',
+            'social_facebook' => 'https://www.facebook.com/profile.php?id=100068836585906',
+            'social_youtube' => 'https://www.youtube.com/@mahalcharinews',
+            'social_twitter' => '', 'social_instagram' => '',
             'social_whatsapp' => '+8801711234567',
         ];
         foreach ($social as $k => $v) { Setting::put($k, $v, 'string', 'social'); }
@@ -46,6 +47,11 @@ class SettingSeeder extends Seeder
         Setting::put('comments_enabled', '1', 'bool', 'behavior');
         Setting::put('comments_auto_approve', '0', 'bool', 'behavior');
         Setting::put('site_maintenance', '0', 'bool', 'behavior');
+
+        // ImgBB Settings - user provided key
+        Setting::put('imgbb_api_key', '4bfac8cf6fa4714236c08292299d2862', 'string', 'media');
+        Setting::put('imgbb_enabled', '1', 'bool', 'media');
+        Setting::put('imgbb_expiration', '0', 'string', 'media'); // 0 = never expire
 
         Setting::flushCache();
     }

@@ -1,0 +1,6 @@
+name = "mlc-website"
+compatibility_date = "2026-09-17"
+
+[assets]
+directory = "./legacy-demo"
+not_found_handling = "single-page-application"

@@ -24,13 +24,18 @@ class MediaController extends Controller
 
         $media = $query->paginate(24)->withQueryString();
 
+        $imgbbService = new \App\Services\ImgbbService();
+
         return view('admin.media.index', [
             'media'  => $media,
             'stats'  => [
                 'total' => Media::count(),
                 'images'=> Media::images()->count(),
                 'size'  => (int) Media::sum('size'),
+                'imgbb' => Media::where('disk','imgbb')->count(),
             ],
+            'imgbbEnabled' => $imgbbService->isEnabled(),
+            'imgbbKey' => substr($imgbbService->getApiKey(), 0, 8).'****',
         ]);
     }
 

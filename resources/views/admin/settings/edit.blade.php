@@ -4,8 +4,8 @@
 <x-admin.page-head title="সাইট সেটিংস" subtitle="ওয়েবসাইটের সাধারণ তথ্য, যোগাযোগ, সোশ্যাল ও আচরণ নিয়ন্ত্রণ" />
 @php
     $groups = $groups;
-    $titles = ['general'=>'সাধারণ','contact'=>'যোগাযোগ','social'=>'সোশ্যাল মিডিয়া','footer'=>'ফুটার','behavior'=>'আচরণ ও মন্তব্য','integrations'=>'ইন্টিগ্রেশন ও কাস্টম কোড'];
-    $icons  = ['general'=>'ph-gear-six','contact'=>'ph-phone','social'=>'ph-share-network','footer'=>'ph-layout','behavior'=>'ph-sliders-horizontal','integrations'=>'ph-code'];
+    $titles = ['general'=>'সাধারণ','contact'=>'যোগাযোগ','social'=>'সোশ্যাল মিডিয়া','footer'=>'ফুটার','behavior'=>'আচরণ ও মন্তব্য','media'=>'মিডিয়া ও ImgBB','integrations'=>'ইন্টিগ্রেশন ও কাস্টম কোড'];
+    $icons  = ['general'=>'ph-gear-six','contact'=>'ph-phone','social'=>'ph-share-network','footer'=>'ph-layout','behavior'=>'ph-sliders-horizontal','media'=>'ph-image-square','integrations'=>'ph-code'];
     $first  = array_key_first($groups);
 @endphp
 <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
