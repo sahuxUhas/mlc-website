@@ -16,16 +16,20 @@ class HomeController extends Controller
 {
     public function index()
     {
-        // N+1 এড়াতে একই কুয়েরিতে ক্যাটাগরি + সর্বশেষ ২টি সংবাদ
         $data = Cache::remember('site.home.data', now()->addMinutes(5), function () {
-            $categories = Category::forHome()->get();
+            // 🚀 Performance: children eager load করে N+1 query এড়ানো হচ্ছে
+            $categories = Category::forHome()
+                ->with('children:id,parent_id')
+                ->get();
 
             // প্রতিটি ক্যাটাগরি থেকে সর্বোচ্চ ২টি — eager loading সহ
             $sections = $categories->map(function (Category $category) {
+                // ✅ Children relation আগে থেকেই লোড করা, তাই নতুন query হবে না
+                $categoryIds = $category->children->pluck('id')->push($category->id)->all();
+
                 $posts = Post::published()
                     ->with(['category:id,name,slug,color', 'reporter:id,name,slug'])
-                    ->where(fn ($q) => $q->where('category_id', $category->id)
-                        ->orWhereIn('category_id', $category->children()->pluck('id')))
+                    ->whereIn('category_id', $categoryIds)
                     ->latestFirst()
                     ->limit(2)
                     ->get();
