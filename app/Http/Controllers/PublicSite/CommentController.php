@@ -49,23 +49,21 @@ class CommentController extends Controller
             'body'             => $validated['body'],
             'ip_address'       => $request->ip(),
             'user_agent'       => substr((string) $request->userAgent(), 0, 500),
-            // নিষিদ্ধ শব্দ থাকলে সরাসরি স্প্যাম, নাহলে মডারেশনের জন্য pending
-            'status'           => 'pending',
+            // সাথে সাথে Publish হবে - কোনো approval waiting নয়
+            'status'           => 'approved',
         ]);
 
         $comment->save();
 
         if ($comment->containsBadWords()) {
             $comment->update(['status' => 'spam']);
+            return back()->with('error', 'আপনার মন্তব্যে আপত্তিকর শব্দ থাকায় তা প্রকাশ করা হবে না।');
         }
 
-        // মডারেশন ছাড়াই দৃশ্যমান হবে কিনা (সাইট সেটিংস)
-        if (filter_var(site_setting('comments_auto_approve', '0'), FILTER_VALIDATE_BOOLEAN)) {
-            $comment->update(['status' => 'approved']);
-            $post->increment('comments_count');
-        }
+        // সাথে সাথে প্রকাশিত
+        $post->increment('comments_count');
 
-        return back()->with('success', 'আপনার মন্তব্য জমা হয়েছে। মডারেশনের পর প্রকাশিত হবে।');
+        return back()->with('success', '✓ মন্তব্য প্রকাশিত হয়েছে! ধন্যবাদ।');
     }
 
     /** পাঠক কর্তৃক মন্তব্য রিপোর্ট */

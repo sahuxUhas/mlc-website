@@ -2964,22 +2964,27 @@
                 if (!bodyTrim) { setCMsg({ t: 'err', m: 'অনুগ্রহ করে মন্তব্য লিখুন।' }); return; }
                 if (bodyTrim.length < 3) { setCMsg({ t: 'err', m: 'মন্তব্য অন্তত ৩ অক্ষরের হতে হবে।' }); return; }
                 
-                // Use existing guard if available, else simple approve
-                let status = 'pending';
+                // Immediate publish - no approval waiting
+                let status = 'approved';
                 let flagged = false;
                 try {
                     const g = typeof mcCommentGuard !== 'undefined' ? mcCommentGuard(nameTrim, bodyTrim, n.id) : null;
                     if (typeof g === 'string') { setCMsg({ t: 'err', m: g }); return; }
-                    if (g && g.status) { status = g.status; flagged = !!g.flagged; }
+                    if (g && g.flagged) { status = 'spam'; flagged = true; }
                     if (g && g.recent) {
                         try { localStorage.setItem(typeof mcRateKey !== 'undefined' ? mcRateKey : 'mc_rate', JSON.stringify([...g.recent, Date.now()])); } catch (e2) {}
                     }
                 } catch (e) {}
 
+                if (flagged) {
+                    setCMsg({ t: 'err', m: 'আপনার মন্তব্যে আপত্তিকর শব্দ থাকায় তা প্রকাশ করা হবে না।' });
+                    return;
+                }
+
                 MC_STORE.mutate('create:comments:নতুন মন্তব্য #' + n.id, (db) => {
-                    db.comments.unshift({ id: mcUid('c'), newsId: n.id, name: nameTrim, body: bodyTrim, createdAt: mcNowISO(), status: status, ip: 'পাঠক', flagged: flagged });
+                    db.comments.unshift({ id: mcUid('c'), newsId: n.id, name: nameTrim, body: bodyTrim, createdAt: mcNowISO(), status: 'approved', ip: 'পাঠক', flagged: false });
                 });
-                setCMsg(flagged ? { t: 'err', m: 'আপনার মন্তব্যে আপত্তিকর শব্দ থাকায় তা প্রকাশ করা হবে না।' } : { t: 'ok', m: 'ধন্যবাদ! মন্তব্যটি অনুমোদনের অপেক্ষায় — অ্যাডমিন অনুমোদন করলে প্রকাশিত হবে।' });
+                setCMsg({ t: 'ok', m: '✓ মন্তব্য প্রকাশিত হয়েছে! ধন্যবাদ।' });
                 setCName(''); setCBody('');
             };
 
