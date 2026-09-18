@@ -2231,7 +2231,13 @@
                 if (!this.db.adRequests) this.db.adRequests = (mcSeedDB().adRequests || []);
                 if (!this.db.comments) this.db.comments = (mcSeedDB().comments || []);
                 if (!this.db.announcements) this.db.announcements = (mcSeedDB().announcements || []);
-                if (!this.db.videos || this.db.videos.length < 8 || !this.db.videos[0].videoUrl || this.db.videos[0].videoUrl !== 'videos/v1.mp4') {
+                // Force reset old broken videos (videos/v1.mp4 or profile.php) to working MP4
+                const needsVideoReset = !this.db.videos || this.db.videos.length < 6 || !this.db.videos[0].videoUrl ||
+                    this.db.videos[0].videoUrl.includes('videos/') ||
+                    this.db.videos[0].videoUrl.includes('profile.php') ||
+                    (this.db.videos[0].fbUrl && this.db.videos[0].fbUrl.includes('profile.php?id=')) ||
+                    !this.db.videos[0].videoUrl.startsWith('http');
+                if (needsVideoReset) {
                     this.db.videos = MOCK_VIDEOS.map(v => ({ ...v }));
                 }
                 return this.db;
@@ -2397,8 +2403,8 @@
                 // ---- সরাসরি HTML5 ভিডিও প্লেয়ার - Fixed ----
         const McFbVideo = ({ url, title, poster, autoPlay = false, isReel = false }) => {
             const videoRef = React.useRef(null);
-            const [speed, setSpeed] = React.useState(1);
             const [hasError, setHasError] = React.useState(false);
+            const [isLoading, setIsLoading] = React.useState(true);
 
             const matched = React.useMemo(() => {
                 if (!url) return (typeof MOCK_VIDEOS !== 'undefined' ? MOCK_VIDEOS[0] : null);
@@ -2413,27 +2419,66 @@
             }, [url]);
 
             const directSrc = React.useMemo(() => {
-                if (url && url.endsWith('.mp4')) return url;
-                if (matched && matched.videoUrl && matched.videoUrl.endsWith('.mp4')) return matched.videoUrl;
-                return matched ? matched.videoUrl : null;
+                if (url && (url.endsWith('.mp4') || url.includes('.mp4'))) return url;
+                if (matched && matched.videoUrl && (matched.videoUrl.endsWith('.mp4') || matched.videoUrl.includes('.mp4'))) return matched.videoUrl;
+                // fallback to matched videoUrl even if not mp4, but prefer mp4
+                return matched ? matched.videoUrl : (url && url.startsWith('http') ? url : null);
             }, [url, matched]);
             
             const directPoster = poster || (matched ? matched.thumb : null);
             const targetFbUrl = (matched ? matched.fbUrl : (url && url.startsWith('http') ? url : null));
             const isVertical = isReel || (matched && matched.isReel);
 
-            const changeSpeed = (s) => {
-                setSpeed(s);
-                if (videoRef.current) videoRef.current.playbackRate = s;
-            };
-
             const containerRatio = isVertical ? 'aspect-[9/16] max-w-[420px] mx-auto' : 'aspect-video';
-            const speedBtnClass = (s) => `px-2 py-0.5 rounded text-[11px] font-bold ${speed === s ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300'}`;
+
+            // Reset error when src changes
+            React.useEffect(() => {
+                setHasError(false);
+                setIsLoading(true);
+            }, [directSrc]);
+
+            if (hasError) {
+                return (
+                    <div className="space-y-2.5">
+                        <div className={`relative overflow-hidden rounded-2xl bg-gray-900 shadow-xl border border-gray-200 dark:border-[#263246] ${containerRatio} flex flex-col items-center justify-center p-6 text-center`}>
+                            {directPoster && <img src={directPoster} alt={title || 'ভিডিও'} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+                            <div className="relative z-10 flex flex-col items-center gap-3">
+                                <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center">
+                                    <i className="ph ph-video text-2xl text-white"></i>
+                                </div>
+                                <p className="text-white font-bold text-sm">ভিডিও লোড হচ্ছে না</p>
+                                <p className="text-white/70 text-xs max-w-[280px]">নেটওয়ার্ক সমস্যা বা ব্রাউজার সাপোর্ট না থাকায় ভিডিও চালানো যায়নি। নিচের বাটনে ক্লিক করে Facebook-এ দেখুন বা আবার চেষ্টা করুন।</p>
+                                <div className="flex flex-wrap gap-2 justify-center mt-1">
+                                    <button onClick={() => setHasError(false)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-gray-900 text-xs font-bold hover:bg-gray-100">
+                                        <i className="ph ph-arrow-clockwise"></i> আবার চেষ্টা করুন
+                                    </button>
+                                    {targetFbUrl && (
+                                        <a href={targetFbUrl} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
+                                            <i className="ph-fill ph-facebook-logo"></i> Facebook-এ দেখুন
+                                        </a>
+                                    )}
+                                </div>
+                                {directSrc && <p className="text-[10px] text-white/50 break-all mt-2 max-w-full">{directSrc}</p>}
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-[#182233] dark:border-[#263246]">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-xs font-bold border border-amber-500/20">
+                                <i className="ph ph-warning"></i> HTML5 প্লেয়ার - ত্রুটি
+                            </span>
+                            {targetFbUrl && (
+                                <a href={targetFbUrl} target="_blank" rel="noopener" className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
+                                    <i className="ph-fill ph-facebook-logo"></i> Facebook-এ দেখুন
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="space-y-2.5">
                     <div className={`relative overflow-hidden rounded-2xl bg-black shadow-xl border border-gray-200 dark:border-[#263246] ${containerRatio}`}>
-                        {directSrc && !hasError ? (
+                        {directSrc ? (
                             <video
                                 ref={videoRef}
                                 src={directSrc}
@@ -2442,24 +2487,33 @@
                                 playsInline
                                 preload="metadata"
                                 autoPlay={autoPlay}
+                                crossOrigin="anonymous"
+                                onLoadedData={() => setIsLoading(false)}
                                 onError={() => setHasError(true)}
                                 className="w-full h-full object-contain bg-black"
                             />
-                        ) : (
+                        ) : targetFbUrl ? (
                             <iframe
                                 title={title || 'ভিডিও'}
-                                src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetFbUrl || url || '')}&show_text=false&t=0`}
+                                src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetFbUrl)}&show_text=false&t=0`}
                                 loading="lazy"
                                 className="absolute inset-0 h-full w-full border-0"
                                 allowFullScreen
                                 allow="encrypted-media; picture-in-picture; autoplay; clipboard-write"
                             />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white text-sm">ভিডিও লিংক পাওয়া যায়নি</div>
+                        )}
+                        {isLoading && directSrc && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                <div className="h-8 w-8 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                            </div>
                         )}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-[#182233] dark:border-[#263246]">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-xs font-bold border border-emerald-500/20">
                             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            {hasError ? 'Facebook প্লেয়ার' : 'HTML5 প্লেয়ার - সরাসরি চলবে'}
+                            HTML5 প্লেয়ার - সরাসরি চলবে
                         </span>
                         {targetFbUrl && (
                             <a href={targetFbUrl} target="_blank" rel="noopener" className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
