@@ -2885,159 +2885,250 @@
         // ==================================================================
         const McArticlePage = ({ slug }) => {
             const { navigate } = React.useContext(AppContext);
-            const db = useMcStore();
             const n = api.getArticleBySlug(slug);
             React.useEffect(() => { if (n) mcCountView(n.id); window.scrollTo({ top: 0, behavior: 'auto' }); }, [n && n.id]);
             if (!n) return <McNotFound path={'news/' + slug} />;
             const cat = api.getCategory(n.categoryId);
-            const rep = MOCK_USERS.reporters.find(r => r.id === n.authorId) || MOCK_USERS.reporters[0];
-            const related = api.getNewsByCategory(cat.id, 4).filter(x => x.id !== n.id).slice(0, 3);
             const gallery = (n.gallery || []).filter(x => x.src);
             const paras = String(n.content || '').split(/<br\s*\/?>\s*<br\s*\/?>/i);
-            const ctaText = (api.getSettings().ctaText || '').replace('{site}', SITE.name);
-            const ctaUrl = /https?:/.test(api.getSettings().ctaUrl || '') ? api.getSettings().ctaUrl : 'https://www.facebook.com/profile.php?id=100068836585906';
             const jsonLd = {
                 "@context": "https://schema.org", "@type": "NewsArticle", "headline": n.title, "datePublished": n.publishedAt,
                 "dateModified": n.updatedAt || n.publishedAt, "mainEntityOfPage": { "@type": "WebPage" },
-                "author": { "@type": "Person", "name": rep.name }, "description": n.excerpt, "image": n.image ? [n.image] : [],
+                "author": { "@type": "Person", "name": "মহালছড়ি নিউজ" }, "description": n.excerpt, "image": n.image ? [n.image] : [],
                 "publisher": { "@type": "Organization", "name": SITE.name }, "articleSection": cat.name, "inLanguage": "bn",
             };
+
+            // Share logic
+            const [showShare, setShowShare] = React.useState(false);
+            const [copyDone, setCopyDone] = React.useState(false);
+            const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+            const shareTitle = n.title;
+
+            const doCopy = () => {
+                const ok = () => {
+                    setCopyDone(true);
+                    mcToast('✓ নিউজ লিংক কপি হয়েছে');
+                    setTimeout(() => setCopyDone(false), 2000);
+                };
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(shareUrl).then(ok, ok);
+                    } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = shareUrl;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        ok();
+                    }
+                } catch (e) { ok(); }
+            };
+
+            const shareLinks = {
+                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+                messenger: `fb-messenger://share?link=${encodeURIComponent(shareUrl)}`,
+                whatsapp: `https://wa.me/?text=${encodeURIComponent(shareTitle + ' ' + shareUrl)}`,
+                x: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+                telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+            };
+
+            const handleNativeShare = () => {
+                if (navigator.share) {
+                    navigator.share({ title: shareTitle, url: shareUrl }).catch(() => setShowShare(v => !v));
+                } else {
+                    setShowShare(v => !v);
+                }
+            };
+
+            // Comment logic - simplified clean version
+            const [cName, setCName] = React.useState('');
+            const [cBody, setCBody] = React.useState('');
+            const [cMsg, setCMsg] = React.useState(null);
+            const [showCommentForm, setShowCommentForm] = React.useState(false);
+            const comments = api.getComments(n.id);
+            const commentFormRef = React.useRef(null);
+
+            const scrollToComment = () => {
+                setShowCommentForm(true);
+                setTimeout(() => {
+                    if (commentFormRef.current) commentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            };
+
+            const submitComment = (e) => {
+                e.preventDefault();
+                const nameTrim = cName.trim();
+                const bodyTrim = cBody.trim();
+                if (!nameTrim) { setCMsg({ t: 'err', m: 'অনুগ্রহ করে আপনার নাম লিখুন।' }); return; }
+                if (!bodyTrim) { setCMsg({ t: 'err', m: 'অনুগ্রহ করে মন্তব্য লিখুন।' }); return; }
+                if (bodyTrim.length < 3) { setCMsg({ t: 'err', m: 'মন্তব্য অন্তত ৩ অক্ষরের হতে হবে।' }); return; }
+                
+                // Use existing guard if available, else simple approve
+                let status = 'pending';
+                let flagged = false;
+                try {
+                    const g = typeof mcCommentGuard !== 'undefined' ? mcCommentGuard(nameTrim, bodyTrim, n.id) : null;
+                    if (typeof g === 'string') { setCMsg({ t: 'err', m: g }); return; }
+                    if (g && g.status) { status = g.status; flagged = !!g.flagged; }
+                    if (g && g.recent) {
+                        try { localStorage.setItem(typeof mcRateKey !== 'undefined' ? mcRateKey : 'mc_rate', JSON.stringify([...g.recent, Date.now()])); } catch (e2) {}
+                    }
+                } catch (e) {}
+
+                MC_STORE.mutate('create:comments:নতুন মন্তব্য #' + n.id, (db) => {
+                    db.comments.unshift({ id: mcUid('c'), newsId: n.id, name: nameTrim, body: bodyTrim, createdAt: mcNowISO(), status: status, ip: 'পাঠক', flagged: flagged });
+                });
+                setCMsg(flagged ? { t: 'err', m: 'আপনার মন্তব্যে আপত্তিকর শব্দ থাকায় তা প্রকাশ করা হবে না।' } : { t: 'ok', m: 'ধন্যবাদ! মন্তব্যটি অনুমোদনের অপেক্ষায় — অ্যাডমিন অনুমোদন করলে প্রকাশিত হবে।' });
+                setCName(''); setCBody('');
+            };
+
             return (
-                <div className="container mx-auto px-4 py-8" id="article-page">
+                <div className="container mx-auto px-4 py-6 max-w-3xl" id="article-page">
                     <McMeta title={n.title} desc={n.excerpt} />
                     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
-                    {/* ১. Breadcrumb */}
-                    <div className="mb-5 flex flex-wrap items-center text-sm text-gray-500">
-                        <button onClick={() => navigate('/')} className="hover:text-brand-red"><i className="ph ph-house mr-1"></i>হোম</button>
+                    {/* Breadcrumb - clean, only Home → Category, no title */}
+                    <div className="mb-5 flex flex-wrap items-center text-sm text-gray-500 dark:text-gray-400">
+                        <button onClick={() => navigate('/')} className="hover:text-brand-red flex items-center gap-1"><i className="ph ph-house"></i> হোম</button>
                         <i className="ph ph-caret-right mx-2 text-xs"></i>
-                        <button onClick={() => navigate('/category', { id: cat.id })} className="hover:text-brand-red">{cat.name}</button>
-                        <i className="ph ph-caret-right mx-2 text-xs"></i>
-                        <span className="line-clamp-1 max-w-[52ch] font-medium text-gray-700 dark:text-gray-300">{n.title}</span>
+                        <button onClick={() => navigate('/category', { id: cat.id })} className="hover:text-brand-red font-semibold">{cat.name}</button>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
-                        <div className="min-w-0 lg:col-span-8">
-                            {/* ২. ব্যাজ */}
-                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <span className="rounded bg-brand-red px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-white">{cat.name}</span>
-                                {n.breaking && n.breaking.on && <span className="rounded bg-amber-400 px-2.5 py-1 text-[11px] font-bold uppercase text-gray-900">ব্রেকিং</span>}
-                                <span className="rounded bg-blue-600 px-2.5 py-1 text-[11px] font-bold uppercase text-white">সংবাদ</span>
-                                <McDemoTag />
-                            </div>
-                            {/* ৩–৪. শিরোনাম + সাবহেড */}
-                            <h1 className="mb-3 font-serif text-3xl font-bold leading-tight text-gray-900 md:text-[40px] md:leading-[1.2] dark:text-white">{n.title}</h1>
-                            <p className="mb-4 border-l-4 border-brand-red pl-4 text-[17px] font-medium italic leading-relaxed text-gray-600 dark:text-gray-300">{n.excerpt}</p>
-                            {/* ৫. মেটা */}
-                            <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-y border-gray-200 py-3 text-[13px] text-gray-600 dark:border-gray-700 dark:text-gray-400">
-                                <span className="flex items-center"><span className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-brand-paper font-serif font-bold text-[#1F7A3D]">{rep.name.slice(0, 1)}</span>{rep.name} · {rep.role}</span>
-                                <span><i className="ph ph-calendar-blank mr-1"></i>{formatBanglaDate(n.publishedAt)}</span>
-                                <span><i className="ph ph-clock mr-1"></i>{new Date(n.publishedAt).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span><i className="ph ph-eye mr-1"></i>{mcBn((n.views || 0).toLocaleString('bn-BD'))} বার পঠিত</span>
-                            </div>
-                            {/* ৬. শেয়ার বাটন */}
-                            <McShare title={n.title} />
-                            {/* ৭. ফিচার্ড ছবি + ক্যাপশন */}
-                            {n.image && (
-                                <figure className="mb-6">
-                                    <button className="block w-full overflow-hidden rounded-lg" onClick={() => mcOpenLightbox([{ src: n.image, alt: n.title, caption: n.imageCredit ? 'ছবি: ' + n.imageCredit : '' }], 0)} aria-label="ছবি বড় করে দেখুন">
-                                        <img src={n.image} alt={n.title} loading="lazy" decoding="async" onError={imgFallback} className="w-full object-cover" />
+                    {/* News Title - clean, keep title as per content focus */}
+                    <h1 className="mb-4 font-serif text-2xl font-bold leading-tight text-gray-900 md:text-3xl dark:text-white">{n.title}</h1>
+
+                    {/* News Image - no caption */}
+                    {n.image && (
+                        <figure className="mb-6 overflow-hidden rounded-xl">
+                            <img src={n.image} alt={n.title} loading="lazy" decoding="async" onError={imgFallback} className="w-full object-cover" />
+                        </figure>
+                    )}
+
+                    {/* News Content - directly */}
+                    <div className="article-body text-[17px] leading-loose text-gray-800 dark:text-gray-200">
+                        {paras.map((html, i) => (<div key={i} dangerouslySetInnerHTML={{ __html: html }} />))}
+                    </div>
+
+                    {/* Image Gallery - keep but clean, no extra demo */}
+                    {gallery.length > 0 && (
+                        <section className="mt-8">
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                {gallery.map((g, i) => (
+                                    <button key={i} onClick={() => mcOpenLightbox(gallery.map(x => ({ src: x.src, alt: x.alt, caption: x.caption, credit: x.credit })), i)} className="group overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                                        <img src={g.src} alt={g.alt || ''} loading="lazy" decoding="async" onError={imgFallback} className="h-36 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                     </button>
-                                    <figcaption className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[12px] text-gray-500">
-                                        <span>{n.imageCaption || n.title}</span>
-                                        {n.imageCredit && <span className="font-semibold">ছবি: {n.imageCredit}</span>}
-                                    </figcaption>
-                                </figure>
-                            )}
-                            {/* ৮. কনটেন্ট */}
-                            <div className="article-body text-[17px] leading-loose text-gray-800 dark:text-gray-200">
-                                {paras.map((html, i) => (<div key={i} dangerouslySetInnerHTML={{ __html: html }} />))}
+                                ))}
                             </div>
+                        </section>
+                    )}
 
-                            {/* ৯. ইমেজ গ্যালারি */}
-                            {gallery.length > 0 && (
-                                <section className="mt-8">
-                                    <h3 className="mb-3 border-l-4 border-brand-red pl-3 font-serif text-xl font-bold text-gray-900 dark:text-white">ছবি গ্যালারি ({mcBn(gallery.length)})</h3>
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                        {gallery.map((g, i) => (
-                                            <button key={i} onClick={() => mcOpenLightbox(gallery.map(x => ({ src: x.src, alt: x.alt, caption: x.caption, credit: x.credit })), i)} className="group overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
-                                                <img src={g.src} alt={g.alt || ''} loading="lazy" decoding="async" onError={imgFallback} className="h-36 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                                {g.caption && <span className="block px-2 py-1.5 text-[11px] leading-snug text-gray-600 dark:text-gray-400">{g.caption}</span>}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
+                    {/* Video if exists - keep */}
+                    {n.videoUrl && (
+                        <section className="mt-8">
+                            <McFbVideo url={n.videoUrl} title={n.title} />
+                        </section>
+                    )}
 
-                            {/* ১০. ভিডিও / ফেসবুক এমবেড */}
-                            {n.videoUrl && (
-                                <section className="mt-8">
-                                    <h3 className="mb-3 border-l-4 border-brand-red pl-3 font-serif text-xl font-bold text-gray-900 dark:text-white">ভিডিও</h3>
-                                    <McFbVideo url={n.videoUrl} title={n.title} />
-                                    <a href={n.videoUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#1877F2] px-4 py-2 text-sm font-bold text-[#1877F2] hover:bg-[#1877F2] hover:text-white">
-                                        <i className="ph-fill ph-facebook-logo text-lg"></i> Facebook-এ দেখুন
-                                    </a>
-                                </section>
-                            )}
-
-                            {/* ১১. গুরুত্বপূর্ণ / সংক্ষিপ্তসার */}
-                            <aside className="mt-8 rounded-lg border-l-4 border-[#1F7A3D] bg-[#EAF7EC] p-5 dark:border-[#7BCF95] dark:bg-[#12291C]">
-                                <h3 className="mb-2 flex items-center gap-2 font-serif text-lg font-bold text-[#1F7A3D] dark:text-[#7BCF95]"><i className="ph-fill ph-info"></i> সংক্ষেপে</h3>
-                                <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">{n.excerpt}</p>
-                            </aside>
-
-                            {/* ১২. ট্যাগ */}
-                            <div className="mt-6 flex flex-wrap items-center gap-2">
-                                <span className="text-sm font-bold text-gray-700 dark:text-gray-300">ট্যাগ:</span>
-                                {(n.tags || []).length ? (n.tags || []).map(t => <span key={t} className="rounded-full border border-gray-300 px-3 py-1 text-[13px] text-gray-600 hover:border-brand-red hover:text-brand-red dark:border-gray-700 dark:text-gray-300">{t}</span>) : <span className="text-sm text-gray-500">—</span>}
-                            </div>
-
-                            {/* ১৩. ফেসবুক CTA */}
-                            <div className="mt-6 rounded-lg bg-[#1877F2] p-5 text-white">
-                                <p className="mb-3 font-serif text-lg font-bold">{ctaText}</p>
-                                <a href={ctaUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2 text-sm font-bold text-[#1877F2] hover:bg-blue-50"><i className="ph-fill ph-facebook-logo text-lg"></i> {api.getSettings().ctaButtonText || 'ফলো করুন'}</a>
-                            </div>
-
-                            <div className="mt-6"><McShare title={n.title} /></div>
-
-                            {/* ১৪. মন্তব্য */}
-                            <McComments newsId={n.id} count={api.getComments(n.id).length} />
-
-                            {/* ১৫. সম্পর্কিত সংবাদ */}
-                            {related.length > 0 && (
-                                <section className="mt-8">
-                                    <SectionTitle title="সম্পর্কিত সংবাদ" showLink={false} />
-                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">{related.map(r => <NewsCard key={r.id} news={r} />)}</div>
-                                </section>
-                            )}
+                    {/* Share Section - new small beautiful */}
+                    <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button onClick={handleNativeShare} className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
+                                <i className="ph ph-share-network text-base"></i> শেয়ার করুন
+                            </button>
+                            <button onClick={doCopy} className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold transition-colors ${copyDone ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                                <i className={`ph ${copyDone ? 'ph-check' : 'ph-link'}`}></i> {copyDone ? 'কপি হয়েছে' : '🔗 কপি লিংক'}
+                            </button>
                         </div>
 
-                        {/* ১৬. সাইডবার */}
-                        <aside className="space-y-8 lg:col-span-4">
-                            <AdSlot position="Sidebar (300x250)" height="250px" />
-                            <div className="rounded-lg border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                                <div className="mb-4 flex items-center justify-between border-b-2 border-gray-900 pb-2 dark:border-gray-500"><h3 className="font-serif text-xl font-bold text-gray-900 dark:text-white">সর্বাধিক পঠিত</h3><i className="ph-fill ph-fire text-xl text-brand-red"></i></div>
-                                <div className="space-y-4">
-                                    {api.getMostRead(5).map((r, i) => (
-                                        <button key={r.id} onClick={() => navigate('/article', { id: r.id })} className="flex w-full items-start gap-3 text-left">
-                                            <img src={r.image} loading="lazy" decoding="async" onError={imgFallback} alt="" className="h-16 w-20 shrink-0 rounded object-cover" />
-                                            <span className="min-w-0"><span className="block font-serif text-[14px] font-semibold leading-snug text-gray-900 line-clamp-2 dark:text-white">{r.title}</span>
-                                            <span className="mt-1 block text-[11px] text-gray-500">{mcBn((r.views || 0).toLocaleString('bn-BD'))} বার পঠিত</span></span>
-                                        </button>
-                                    ))}
+                        {showShare && (
+                            <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 animate-fade-in-up">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-sm font-bold text-gray-900 dark:text-white">শেয়ার করুন</p>
+                                    <button onClick={() => setShowShare(false)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i className="ph ph-x text-lg"></i></button>
+                                </div>
+                                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+                                    <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#1877F2]/10 p-3 hover:bg-[#1877F2]/20 transition-colors">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white"><i className="ph-fill ph-facebook-logo text-xl"></i></span>
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Facebook</span>
+                                    </a>
+                                    <a href={shareLinks.messenger} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#0099FF]/10 p-3 hover:bg-[#0099FF]/20 transition-colors">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0099FF] text-white"><i className="ph-fill ph-messenger-logo text-xl"></i></span>
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Messenger</span>
+                                    </a>
+                                    <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#25D366]/10 p-3 hover:bg-[#25D366]/20 transition-colors">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white"><i className="ph-fill ph-whatsapp-logo text-xl"></i></span>
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">WhatsApp</span>
+                                    </a>
+                                    <a href={shareLinks.x} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-900/10 p-3 hover:bg-gray-900/20 dark:bg-white/10 dark:hover:bg-white/20 transition-colors">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900"><i className="ph ph-x-logo text-xl"></i></span>
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">X</span>
+                                    </a>
+                                    <a href={shareLinks.telegram} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#26A5E4]/10 p-3 hover:bg-[#26A5E4]/20 transition-colors">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#26A5E4] text-white"><i className="ph-fill ph-telegram-logo text-xl"></i></span>
+                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Telegram</span>
+                                    </a>
+                                </div>
+                                <div className="mt-3 flex gap-2">
+                                    <input readOnly value={shareUrl} className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" />
+                                    <button onClick={doCopy} className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-bold text-white dark:bg-white dark:text-gray-900">কপি</button>
                                 </div>
                             </div>
-                            <div className="rounded-lg border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                                <h3 className="mb-3 border-b-2 border-gray-900 pb-2 font-serif text-xl font-bold text-gray-900 dark:border-gray-500 dark:text-white">বিভাগসমূহ</h3>
-                                <div className="flex flex-wrap gap-2">{api.getCategories(true).map(c => <button key={c.id} onClick={() => navigate('/category', { id: c.id })} className={`rounded-full border px-3 py-1 text-xs font-semibold ${c.id === cat.id ? 'border-brand-red bg-brand-red text-white' : 'border-gray-300 text-gray-600 hover:border-brand-red hover:text-brand-red dark:border-gray-700 dark:text-gray-300'}`}>{c.name}</button>)}</div>
+                        )}
+                    </div>
+
+                    {/* Comment Button - small clean */}
+                    <div className="mt-6">
+                        <button onClick={scrollToComment} className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
+                            💬 মন্তব্য করুন {comments.length > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{toBanglaNum(comments.length)}</span>}
+                        </button>
+                    </div>
+
+                    {/* Comment Form */}
+                    <div ref={commentFormRef} className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-800/50">
+                        <h3 className="mb-4 font-serif text-lg font-bold text-gray-900 dark:text-white">মন্তব্য লিখুন</h3>
+                        <form onSubmit={submitComment} className="space-y-3">
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">আপনার নাম</label>
+                                <input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="নাম লিখুন" maxLength="60" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red" />
                             </div>
-                            <AdSlot position="In-Article (Responsive)" width="100%" height="160px" />
-                        </aside>
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-gray-700 dark:text-gray-300">মন্তব্য</label>
+                                <textarea value={cBody} onChange={(e) => setCBody(e.target.value)} placeholder="আপনার মন্তব্য লিখুন..." rows="4" maxLength="900" className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white focus:border-brand-red focus:outline-none focus:ring-1 focus:ring-brand-red"></textarea>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                                <button type="submit" className="rounded-lg bg-brand-red px-6 py-2.5 text-sm font-bold text-white hover:bg-red-700 transition-colors">মন্তব্য পাঠান</button>
+                                {cMsg && <span className={`text-sm font-semibold ${cMsg.t === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-brand-red'}`}>{cMsg.m}</span>}
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">মন্তব্য অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে। অশ্লীলতা বা ব্যক্তিগত আক্রমণ এড়িয়ে চলুন।</p>
+                        </form>
+
+                        {/* Published Comments */}
+                        <div className="mt-8">
+                            <h4 className="mb-4 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <i className="ph ph-chat-circle text-brand-red"></i> মন্তব্যসমূহ {comments.length > 0 && <span className="text-sm font-normal text-gray-500">({toBanglaNum(comments.length)})</span>}
+                            </h4>
+                            <ul className="space-y-4">
+                                {comments.map(c => (
+                                    <li key={c.id} className="flex gap-3 rounded-xl bg-white p-4 border border-gray-100 dark:bg-gray-900 dark:border-gray-700">
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EAF7EC] font-serif font-bold text-[#1F7A3D] dark:bg-[#12291C] dark:text-[#7BCF95]">{c.name.slice(0, 1)}</span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex flex-wrap items-center gap-2 text-[13px] font-bold text-gray-900 dark:text-white">{c.name}
+                                                <span className="text-[11px] font-normal text-gray-500 dark:text-gray-400">{typeof timeAgo !== 'undefined' ? timeAgo(c.createdAt) : new Date(c.createdAt).toLocaleDateString('bn-BD')}</span></span>
+                                            <span className="mt-1 block text-sm leading-relaxed text-gray-700 dark:text-gray-300">{c.body}</span>
+                                        </span>
+                                    </li>
+                                ))}
+                                {!comments.length && <li className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400">এখনো কোনো মন্তব্য নেই — প্রথম মন্তব্যটি আপনিই করুন।</li>}
+                            </ul>
+                        </div>
                     </div>
                 </div>
             );
         };
 
+        // ==================================================================
+        //  /videos  ও  /videos/{slug}
         // ==================================================================
         //  /videos  ও  /videos/{slug}
         // ==================================================================
