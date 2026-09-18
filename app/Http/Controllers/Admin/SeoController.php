@@ -26,6 +26,7 @@ class SeoController extends Controller
         ['key' => 'seo_schema_enabled',   'label' => 'Article Structured Data',   'type' => 'bool'],
         ['key' => 'seo_verification_google','label'=> 'Google Search Console কোড', 'type' => 'text'],
         ['key' => 'seo_verification_fb',  'label' => 'Facebook ডোমেইন যাচাই',      'type' => 'text'],
+        ['key' => 'seo_og_image',         'label' => 'ডিফল্ট OG ছবি (শেয়ার প্রিভিউ)', 'type' => 'image', 'hint' => 'খালি থাকলে সাইট লোগো ব্যবহার হবে'],
     ];
 
     public function edit()
@@ -43,8 +44,14 @@ class SeoController extends Controller
             $rules[$field['key']] = match ($field['type']) {
                 'bool'     => ['nullable', 'boolean'],
                 'textarea' => ['nullable', 'string', 'max:8000'],
+                'image'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
                 default    => ['nullable', 'string', 'max:600'],
             };
+
+            // ছবির ঘরের পাশে "অথবা সরাসরি URL" ইনপুটও গ্রহণ করা হয়
+            if ($field['type'] === 'image') {
+                $rules[$field['key'].'_url'] = ['nullable', 'string', 'max:600'];
+            }
         }
 
         $validated = $request->validate($rules);
@@ -55,8 +62,11 @@ class SeoController extends Controller
             Setting::put($key, $value, $field['type'], 'seo');
         }
 
+        // OG ছবি — ১) ফাইল আপলোড ২) না হলে সরাসরি URL ৩) দুটোই না হলে আগের মান
         if ($request->hasFile('seo_og_image')) {
             Setting::put('seo_og_image', $this->uploader->store($request->file('seo_og_image'), 'settings/seo')->path, 'image', 'seo');
+        } elseif (trim((string) ($validated['seo_og_image_url'] ?? '')) !== '') {
+            Setting::put('seo_og_image', trim((string) $validated['seo_og_image_url']), 'image', 'seo');
         }
 
         Setting::flushCache();

@@ -169,6 +169,19 @@ class AdminCustomizationTest extends TestCase
         $this->assertSame(route('page.show', $page->slug), $pageMenu->href);
     }
 
+    public function test_seo_og_image_can_be_set_from_the_seo_form(): void
+    {
+        // আগে ফর্মে ফিল্ডই ছিল না, তাই এই ঘর কখনো সংরক্ষিত হতো না
+        $this->actingAs($this->admin())->get('/admin/seo')->assertOk()->assertSee('seo_og_image', false);
+
+        $this->actingAs($this->admin())->put('/admin/seo', [
+            'seo_og_image_url' => 'https://cdn.example.com/share-card.jpg',
+        ]);
+
+        $this->assertSame('https://cdn.example.com/share-card.jpg', Setting::get('seo_og_image'));
+        $this->get('/')->assertOk()->assertSee('https://cdn.example.com/share-card.jpg', false);
+    }
+
     public function test_footer_menu_items_are_seeded_into_footer_location(): void
     {
         $this->seed(\Database\Seeders\MenuSeeder::class);

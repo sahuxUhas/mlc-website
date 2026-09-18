@@ -2,13 +2,13 @@
 @section('title','SEO সেটিংস')
 @section('content')
 <x-admin.page-head title="SEO ও সার্চ ইঞ্জিন সেটিংস" subtitle="মেটা ট্যাগ, robots.txt, XML sitemap ও Article structured data" />
-<form action="{{ route('admin.seo.update') }}" method="POST" class="space-y-5">
+<form action="{{ route('admin.seo.update') }}" method="POST" enctype="multipart/form-data" class="space-y-5">
     @csrf @method('PUT')
     <div class="mc-card p-4 sm:p-5">
         <h2 class="mb-4 flex items-center gap-2 font-serif text-sm font-bold text-slate-900 dark:text-white"><i class="ph ph-magnifying-glass text-[#E21D2B]"></i> ডিফল্ট মেটা তথ্য</h2>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             @foreach($fields as $field)
-                @if(in_array($field['type'] ?? 'text', ['textarea','bool']))
+                @if(in_array($field['type'] ?? 'text', ['textarea','bool','image'], true))
                     <div class="md:col-span-2"><x-admin.dynamic-field :field="$field" :settings="$settings" /></div>
                 @else
                     <x-admin.dynamic-field :field="$field" :settings="$settings" />
