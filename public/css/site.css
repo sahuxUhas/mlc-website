@@ -116,3 +116,6 @@ html.mc-lock, body.mc-lock { overflow:hidden; }
   .mc-body-pad { padding-bottom:0; }
   body { background:#fff; color:#000; }
 }
+
+/* ফুটারের সোশ্যাল আইকন — অ্যাডমিন প্যানেল থেকে রঙ দেওয়া যায় (--mc-social) */
+.mc-social-btn:hover { background: var(--mc-social, #E21D2B); border-color: var(--mc-social, #E21D2B); color: #fff; }

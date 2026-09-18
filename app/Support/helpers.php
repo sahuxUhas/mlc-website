@@ -158,17 +158,135 @@ if (! function_exists('site_setting')) {
 }
 
 if (! function_exists('mc_placeholder_svg')) {
-    /** ডেমোর ব্র্যান্ডেড PLACEHOLDER_IMG — ছবি লোড না হলে ব্যবহৃত হয় */
+    /**
+     * ব্র্যান্ডেড PLACEHOLDER_IMG — ছবি লোড না হলে ব্যবহৃত হয়।
+     * ডোমেইন/নাম অ্যাডমিন প্যানেল (সাইট সেটিংস) থেকে আসে, তাই হার্ডকোড নয়।
+     */
     function mc_placeholder_svg(): string
     {
+        // সেটিংস টেবিল না থাকলে (ইনস্টলেশনের আগে) নিরাপদ ফলব্যাক
+        $domain = 'mahalcharinews.com';
+
+        try {
+            $domain = (string) (site_setting('site_domain') ?: site_setting('site_name') ?: $domain);
+        } catch (\Throwable $e) {
+            // ডাটাবেস না থাকলে ডিফল্টই ব্যবহৃত হবে
+        }
+
+        // SVG-তে অবৈধ অক্ষর ঢুকলে পুরো ছবি ভেঙে যায় — তাই সীমিত রাখা হচ্ছে
+        $domain = htmlspecialchars(mb_substr(preg_replace('/[^\x{0980}-\x{09FF}A-Za-z0-9.\- ]/u', '', $domain) ?: 'news', 0, 30), ENT_QUOTES);
+        $accent = '#D50E18';
+
         $svg = "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'>"
              ."<rect width='800' height='450' fill='#EAF7EC'/>"
              ."<path d='M0 350 L170 215 L300 330 L440 190 L580 335 L700 250 L800 350 L800 450 L0 450 Z' fill='#C5E7C8'/>"
              ."<path d='M0 400 L210 305 L380 400 L540 300 L690 405 L800 355 L800 450 L0 450 Z' fill='#1F7A3D' opacity='0.22'/>"
-             ."<text x='400' y='120' font-family='Helvetica,Arial,sans-serif' font-size='34' font-weight='700' fill='#0B0B0B' text-anchor='middle' letter-spacing='4'>mahalcharinews.com</text>"
-             ."<circle cx='400' cy='160' r='6' fill='#D50E18'/></svg>";
+             ."<text x='400' y='120' font-family='Helvetica,Arial,sans-serif' font-size='34' font-weight='700' fill='#0B0B0B' text-anchor='middle' letter-spacing='4'>{$domain}</text>"
+             ."<circle cx='400' cy='160' r='6' fill='{$accent}'/></svg>";
 
         return 'data:image/svg+xml,'.rawurlencode($svg);
+    }
+}
+
+if (! function_exists('mc_flag')) {
+    /**
+     * অন/অফ সেটিংস পড়া — ডিফল্টসহ।
+     * সেটিংস সেট না থাকলে $default, সেট থাকলে '0'/'' ছাড়া সবকিছু true।
+     */
+    function mc_flag(string $key, bool $default = true): bool
+    {
+        $value = site_setting($key, null);
+
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+}
+
+if (! function_exists('mc_per_page')) {
+    /** অ্যাডমিন সেটিংস অনুযায়ী প্রতি পেজে কতটি সংবাদ (৪–৬০ এর মধ্যে সীমাবদ্ধ) */
+    function mc_per_page(int $fallback = 15): int
+    {
+        return max(4, min(60, (int) (site_setting('posts_per_page') ?: $fallback)));
+    }
+}
+
+if (! function_exists('mc_social_links')) {
+    /**
+     * সোশ্যাল মিডিয়া লিংক তালিকা — অ্যাডমিন প্যানেলের "সোশ্যাল মিডিয়া" রিপিটার থেকে।
+     * নতুন `social_links` (JSON) থাকলে সেটাই, না থাকলে পুরোনো একক কীগুলো (social_facebook ইত্যাদি)।
+     *
+     * @return array<int, array{label:string, icon:string, url:string, color:?string}>
+     */
+    function mc_social_links(): array
+    {
+        $raw = site_setting('social_links');
+        $rows = is_string($raw) ? json_decode($raw, true) : $raw;
+
+        $icons = [
+            'social_facebook'  => 'ph-facebook-logo',
+            'social_youtube'   => 'ph-youtube-logo',
+            'social_twitter'   => 'ph-x-logo',
+            'social_instagram' => 'ph-instagram-logo',
+            'social_whatsapp'  => 'ph-whatsapp-logo',
+            'social_linkedin'  => 'ph-linkedin-logo',
+            'social_telegram'  => 'ph-telegram-logo',
+            'social_tiktok'    => 'ph-tiktok-logo',
+        ];
+
+        $links = [];
+
+        if (is_array($rows)) {
+            foreach ($rows as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+
+                $url = trim((string) ($row['url'] ?? ''));
+                if ($url === '') {
+                    continue;
+                }
+
+                $icon = trim((string) ($row['icon'] ?? ''));
+
+                $links[] = [
+                    'label' => trim((string) ($row['label'] ?? '')) ?: $url,
+                    'icon'  => $icon !== '' ? $icon : 'ph-globe-simple',
+                    'url'   => $url,
+                    'color' => preg_match('/^#[0-9A-Fa-f]{6}$/', (string) ($row['color'] ?? '')) ? $row['color'] : null,
+                ];
+            }
+        }
+
+        if ($links !== []) {
+            return $links;
+        }
+
+        // ফলব্যাক: পুরোনো একক সেটিংস কী (আগের ইনস্টলেশন যেন ভাঙে)
+        $labels = [
+            'social_facebook'  => 'ফেসবুক',
+            'social_youtube'   => 'ইউটিউব',
+            'social_twitter'   => 'টুইটার / X',
+            'social_instagram' => 'ইনস্টাগ্রাম',
+            'social_whatsapp'  => 'হোয়াটসঅ্যাপ',
+            'social_linkedin'  => 'লিংকডইন',
+            'social_telegram'  => 'টেলিগ্রাম',
+            'social_tiktok'    => 'টিকটক',
+        ];
+
+        foreach ($labels as $key => $label) {
+            $url = trim((string) site_setting($key, ''));
+
+            if ($url === '') {
+                continue;
+            }
+
+            $links[] = ['label' => $label, 'icon' => $icons[$key] ?? 'ph-globe-simple', 'url' => $url, 'color' => null];
+        }
+
+        return $links;
     }
 }
 

@@ -38,7 +38,7 @@ class MenuSeeder extends Seeder
             ]);
         }
 
-        // ফুটার মেনু
+        // ফুটার মেনু — লোকেশন অবশ্যই values-এ দিতে হবে, নইলে 'main' হয়ে যায়
         $footer = [
             ['label' => 'প্রাইভেসি পলিসি', 'url' => '/privacy-policy'],
             ['label' => 'শর্তাবলি', 'url' => '/terms'],
@@ -46,7 +46,7 @@ class MenuSeeder extends Seeder
         ];
         foreach ($footer as $i => $item) {
             Menu::updateOrCreate(['location' => 'footer', 'label' => $item['label']], $item + [
-                'link_type' => 'internal', 'is_enabled' => true, 'sort_order' => $i,
+                'location' => 'footer', 'link_type' => 'internal', 'is_enabled' => true, 'sort_order' => $i,
             ]);
         }
     }

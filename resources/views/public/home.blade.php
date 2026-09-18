@@ -11,7 +11,7 @@
         <section class="mb-10">
             <div class="mb-4 flex items-center gap-2 border-b border-gray-200 pb-2 dark:border-[#263246]">
                 <span class="h-2.5 w-2.5 rounded-full bg-[#E21D2B]"></span>
-                <h2 class="font-serif text-lg font-bold text-gray-900 dark:text-[#F1F5F9] sm:text-xl">সর্বশেষ সংবাদ</h2>
+                <h2 class="font-serif text-lg font-bold text-gray-900 dark:text-[#F1F5F9] sm:text-xl">{{ site_setting('home_highlight_title', 'সর্বশেষ সংবাদ') }}</h2>
             </div>
 
             <a href="{{ route('news.show', $highlight->slug) }}"

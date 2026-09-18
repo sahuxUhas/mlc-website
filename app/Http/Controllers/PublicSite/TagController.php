@@ -15,7 +15,7 @@ class TagController extends Controller
             ->published()
             ->with(['category:id,name,slug,color', 'reporter:id,name,slug'])
             ->latestFirst()
-            ->paginate(15);
+            ->paginate(mc_per_page());
 
         return view('public.tag', compact('tag', 'posts'));
     }
