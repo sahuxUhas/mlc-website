@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\PublicSite;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\IncrementPostViews;
 use App\Models\Post;
 
 /** ফুল নিউজ / আর্টিকেল পেজ */
@@ -18,6 +19,10 @@ class NewsController extends Controller
             ])
             ->where('slug', $slug)
             ->firstOrFail();
+
+        // ⚡ Performance: Views increment background job এ পাঠানো হচ্ছে
+        // সুবিধা: Response দ্রুত হয়, database blocking কমে
+        dispatch(new IncrementPostViews($post->id));
 
         // সম্পর্কিত সংবাদ ও সর্বশেষ সংবাদ (সাইডবার)
         $related = $post->related(4);
