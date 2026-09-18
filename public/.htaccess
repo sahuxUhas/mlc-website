@@ -1,15 +1,11 @@
 <IfModule mod_rewrite.c>
-    <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
-    </IfModule>
-
     RewriteEngine On
 
-    # HTTPS বলপূর্বক চালু (production এ uncomment করুন)
+    # HTTPS redirect - uncomment if you have SSL
     # RewriteCond %{HTTPS} !=on
     # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-    # Handle Authorization Header
+    # Handle Authorization Header (for API)
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
@@ -24,7 +20,7 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
-# সিকিউরিটি হেডার
+# Security Headers (optional, wrapped in IfModule)
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
     Header set X-Frame-Options "SAMEORIGIN"
@@ -32,22 +28,25 @@
     Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
 </IfModule>
 
-# ডট-ফাইল অ্যাক্সেস বন্ধ
-<FilesMatch "^\.">
-    Require all denied
-</FilesMatch>
-
-# আপলোড ডিরেক্টরিতে PHP এক্সিকিউশন বন্ধ (cPanel এ গুরুত্বপূর্ণ)
-<IfModule mod_php.c>
-    php_flag engine off
+# Block dot-files (like .env) - Apache 2.4+
+<IfModule mod_authz_core.c>
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
 </IfModule>
 
-# Gzip কমপ্রেশন
+# Gzip compression
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/javascript application/json image/svg+xml
 </IfModule>
 
-# ব্রাউজার ক্যাশ
+# Browser cache
 <IfModule mod_expires.c>
     ExpiresActive On
     ExpiresByType image/jpeg "access plus 6 months"
@@ -55,4 +54,12 @@
     ExpiresByType image/webp "access plus 6 months"
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
+</IfModule>
+
+# Protect uploads from PHP execution - only if mod_php is used (not FPM)
+# For cPanel with PHP-FPM, this is handled via .user.ini or php.ini
+<IfModule mod_php7.c>
+    <FilesMatch "\.php$">
+        Require all denied
+    </FilesMatch>
 </IfModule>
