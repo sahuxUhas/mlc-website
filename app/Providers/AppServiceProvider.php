@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Post;
+use App\Observers\PostObserver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
@@ -32,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         Model::unguard(false);
         Schema::defaultStringLength(191);
         Paginator::useTailwind();
+
+        // 🚀 Observer Registration — পোস্ট পরিবর্তনে auto cache clear
+        Post::observe(PostObserver::class);
 
         /**
          * Blade ডিরেক্টিভ — বিজ্ঞাপন স্লট
