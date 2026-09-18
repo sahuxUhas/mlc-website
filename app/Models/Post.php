@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class Post extends Model
@@ -107,6 +108,12 @@ class Post extends Model
         return $q->orderByDesc('views');
     }
 
+    /**
+     * 🚀 সার্চ অপটিমাইজেশন: MySQL FULLTEXT index ব্যবহার করে দ্রুত সার্চ
+     * 
+     * MySQL/MariaDB: MATCH...AGAINST ব্যবহার (দ্রুত, index ব্যবহার করে)
+     * SQLite/Others: LIKE fallback (ডেভেলপমেন্ট/টেস্টিং এ)
+     */
     public function scopeSearch(Builder $q, ?string $term): Builder
     {
         $term = trim((string) $term);
@@ -114,17 +121,34 @@ class Post extends Model
             return $q;
         }
 
+        // MySQL FULLTEXT search (অনেক দ্রুত — migration এ index আছে)
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            return $q->whereRaw(
+                'MATCH(title, excerpt, content) AGAINST(? IN NATURAL LANGUAGE MODE)',
+                [$term]
+            );
+        }
+
+        // Fallback for SQLite/other databases (dev/testing)
         return $q->where(function (Builder $inner) use ($term) {
-            $like = '%'.Str::lower($term).'%';
-            $inner->whereRaw('LOWER(title) LIKE ?', [$like])
-                  ->orWhereRaw('LOWER(excerpt) LIKE ?', [$like])
-                  ->orWhereRaw('LOWER(content) LIKE ?', [$like]);
+            $like = '%'.$term.'%';
+            $inner->where('title', 'LIKE', $like)
+                  ->orWhere('excerpt', 'LIKE', $like)
+                  ->orWhere('content', 'LIKE', $like);
         });
     }
 
+    /**
+     * 🚀 ক্যাটাগরি ফিল্টার অপটিমাইজেশন: relation loaded থাকলে নতুন query এড়ানো
+     */
     public function scopeForCategory(Builder $q, Category $category): Builder
     {
-        $ids = $category->children()->pluck('id')->push($category->id)->all();
+        // Children relation আগে থেকে eager load করা থাকলে সেটা ব্যবহার করুন
+        if ($category->relationLoaded('children')) {
+            $ids = $category->children->pluck('id')->push($category->id)->all();
+        } else {
+            $ids = $category->children()->pluck('id')->push($category->id)->all();
+        }
 
         return $q->whereIn('category_id', $ids);
     }
