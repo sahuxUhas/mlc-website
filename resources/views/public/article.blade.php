@@ -27,7 +27,7 @@
 
 @section('content')
 <div class="container mx-auto max-w-3xl px-3 py-6 sm:px-4 md:py-8" id="article-page">
-    {{-- Breadcrumb - clean, only Home → Category --}}
+    {{-- Breadcrumb --}}
     <nav class="mb-5 flex flex-wrap items-center gap-1.5 text-sm text-gray-500 dark:text-[#94A3B8]" aria-label="ব্রেডক্রাম্ব">
         <a href="{{ route('home') }}" class="hover:text-[#D50E18] dark:hover:text-[#22C55E] flex items-center gap-1"><i class="ph ph-house"></i> হোম</a>
         @if($post->category)
@@ -36,12 +36,10 @@
         @endif
     </nav>
 
-    {{-- Title - clean --}}
     <h1 class="mb-4 font-serif text-2xl font-bold leading-tight text-gray-900 dark:text-[#F1F5F9] md:text-3xl">
         {{ $post->title }}
     </h1>
 
-    {{-- Featured Image - no caption --}}
     @if($post->featured_image)
         <figure class="mb-6 overflow-hidden rounded-xl">
             <img src="{{ mc_image($post->featured_image) }}" alt="{{ $post->title }}" class="w-full object-cover" loading="eager" decoding="async"
@@ -49,7 +47,6 @@
         </figure>
     @endif
 
-    {{-- Video if exists --}}
     @if($post->video_url)
         <div class="mb-6 overflow-hidden rounded-2xl bg-black">
             <div class="relative aspect-video">
@@ -58,12 +55,10 @@
         </div>
     @endif
 
-    {{-- Full News Content - directly, no demo --}}
     <div class="article-body font-serif text-[1.02rem] leading-[2] text-gray-800 dark:text-gray-200">
         {!! $post->content !!}
     </div>
 
-    {{-- Gallery - clean, no caption --}}
     @if($post->images->isNotEmpty())
         <section class="mt-8">
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -78,59 +73,21 @@
         </section>
     @endif
 
-    {{-- Share Section - new small beautiful --}}
-    <div class="mt-8 border-t border-gray-200 dark:border-[#263246] pt-6" id="share-section">
-        <div class="flex flex-wrap items-center gap-3">
+    {{-- 3 Buttons in same row: Share (native), Copy Link, Comment - no emoji, direct icons, no custom modal --}}
+    <div class="mt-8 border-t border-gray-200 dark:border-[#263246] pt-6">
+        <div class="flex flex-wrap items-center gap-2.5">
             <button type="button" id="mc-share-btn" class="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
                 <i class="ph ph-share-network text-base"></i> শেয়ার করুন
             </button>
             <button type="button" id="mc-copy-btn" class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-                <i class="ph ph-link"></i> 🔗 কপি লিংক
+                <i class="ph ph-link text-base"></i> কপি লিংক
+            </button>
+            <button type="button" id="mc-comment-jump" class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
+                <i class="ph ph-chat-circle text-base"></i> মন্তব্য করুন @if($post->comments->count()) <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{{ bn_count($post->comments->count()) }}</span> @endif
             </button>
         </div>
-
-        <div id="mc-share-panel" class="mt-4 hidden rounded-2xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-            <div class="mb-3 flex items-center justify-between">
-                <p class="text-sm font-bold text-gray-900 dark:text-white">শেয়ার করুন</p>
-                <button type="button" id="mc-share-close" class="rounded-full p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i class="ph ph-x text-lg"></i></button>
-            </div>
-            <div class="grid grid-cols-3 gap-3 sm:grid-cols-5">
-                <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(url()->current()) }}" target="_blank" rel="noopener" class="flex flex-col items-center gap-1.5 rounded-xl bg-[#1877F2]/10 p-3 hover:bg-[#1877F2]/20 transition-colors">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white"><i class="ph-fill ph-facebook-logo text-xl"></i></span>
-                    <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Facebook</span>
-                </a>
-                <a href="https://www.facebook.com/dialog/send?link={{ urlencode(url()->current()) }}&app_id=123456" target="_blank" rel="noopener" class="flex flex-col items-center gap-1.5 rounded-xl bg-[#0099FF]/10 p-3 hover:bg-[#0099FF]/20 transition-colors">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#0099FF] text-white"><i class="ph-fill ph-messenger-logo text-xl"></i></span>
-                    <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Messenger</span>
-                </a>
-                <a href="https://wa.me/?text={{ urlencode($post->title.' '.url()->current()) }}" target="_blank" rel="noopener" class="flex flex-col items-center gap-1.5 rounded-xl bg-[#25D366]/10 p-3 hover:bg-[#25D366]/20 transition-colors">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white"><i class="ph-fill ph-whatsapp-logo text-xl"></i></span>
-                    <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">WhatsApp</span>
-                </a>
-                <a href="https://twitter.com/intent/tweet?url={{ urlencode(url()->current()) }}&text={{ urlencode($post->title) }}" target="_blank" rel="noopener" class="flex flex-col items-center gap-1.5 rounded-xl bg-gray-900/10 p-3 hover:bg-gray-900/20 dark:bg-white/10 dark:hover:bg-white/20 transition-colors">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900"><i class="ph ph-x-logo text-xl"></i></span>
-                    <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">X</span>
-                </a>
-                <a href="https://t.me/share/url?url={{ urlencode(url()->current()) }}&text={{ urlencode($post->title) }}" target="_blank" rel="noopener" class="flex flex-col items-center gap-1.5 rounded-xl bg-[#26A5E4]/10 p-3 hover:bg-[#26A5E4]/20 transition-colors">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#26A5E4] text-white"><i class="ph-fill ph-telegram-logo text-xl"></i></span>
-                    <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Telegram</span>
-                </a>
-            </div>
-            <div class="mt-3 flex gap-2">
-                <input readonly value="{{ url()->current() }}" class="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" />
-                <button type="button" id="mc-copy-btn2" class="rounded-lg bg-gray-900 px-4 py-2 text-xs font-bold text-white dark:bg-white dark:text-gray-900">কপি</button>
-            </div>
-        </div>
     </div>
 
-    {{-- Comment Button - small clean --}}
-    <div class="mt-6">
-        <button type="button" id="mc-comment-jump" class="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-            💬 মন্তব্য করুন @if($post->comments->count()) <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{{ bn_count($post->comments->count()) }}</span> @endif
-        </button>
-    </div>
-
-    {{-- Comment Section - clean --}}
     @if($post->allow_comments && filter_var(site_setting('comments_enabled', '1'), FILTER_VALIDATE_BOOLEAN))
         <section class="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-[#263246] dark:bg-[#182233]/50" id="comments">
             <h2 class="mb-4 font-serif text-lg font-bold text-gray-900 dark:text-[#F1F5F9]">মন্তব্য লিখুন</h2>
@@ -166,7 +123,6 @@
                     <textarea id="body" name="body" rows="4" required minlength="4" maxlength="2000"
                               placeholder="আপনার মন্তব্য লিখুন..."
                               class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-[#D50E18] focus:ring-1 focus:ring-[#D50E18] dark:border-gray-600 dark:bg-[#0D1422] dark:text-white">{{ old('body') }}</textarea>
-                    <p class="mt-1 text-[11px] text-gray-500 dark:text-[#94A3B8]">মন্তব্য অ্যাডমিন অনুমোদনের পর প্রকাশিত হবে।</p>
                 </div>
 
                 <button type="submit" class="rounded-lg bg-[#D50E18] px-6 py-2.5 text-sm font-bold text-white hover:bg-[#B9121E] transition-colors">
@@ -174,7 +130,6 @@
                 </button>
             </form>
 
-            {{-- Published Comments --}}
             <div class="mt-8">
                 <h3 class="mb-4 flex items-center gap-2 font-bold text-gray-900 dark:text-[#F1F5F9]">
                     <i class="ph ph-chat-circle text-[#E21D2B]"></i> মন্তব্যসমূহ @if($post->comments->count()) <span class="text-sm font-normal text-gray-500">({{ bn_count($post->comments->count()) }})</span> @endif
@@ -200,7 +155,6 @@
     @endif
 </div>
 
-{{-- Lightbox --}}
 <div id="mc-lightbox" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/90 p-4">
     <button type="button" class="absolute left-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20" data-mc-lightbox-close aria-label="বন্ধ করুন">
         <i class="ph-bold ph-x text-xl"></i>
@@ -212,31 +166,29 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const shareBtn = document.getElementById('mc-share-btn');
-    const sharePanel = document.getElementById('mc-share-panel');
-    const shareClose = document.getElementById('mc-share-close');
     const copyBtn = document.getElementById('mc-copy-btn');
-    const copyBtn2 = document.getElementById('mc-copy-btn2');
     const commentJump = document.getElementById('mc-comment-jump');
     const commentsSection = document.getElementById('comments');
     const url = window.location.href;
+    const title = document.title;
 
-    function toggleShare() {
-        if (!sharePanel) return;
-        sharePanel.classList.toggle('hidden');
-        if (!sharePanel.classList.contains('hidden') && navigator.share) {
-            // Try native share first on mobile
-            if (navigator.canShare && navigator.canShare({ url: url })) {
-                navigator.share({ title: document.title, url: url }).catch(() => {});
+    if (shareBtn) {
+        shareBtn.addEventListener('click', function() {
+            if (navigator.share) {
+                navigator.share({ title: title, url: url }).catch(() => {});
+            } else {
+                // No custom modal per requirement - fallback to copy on desktop
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        if (typeof mcToast !== 'undefined') mcToast('✓ নিউজ লিংক কপি হয়েছে');
+                    });
+                }
             }
-        }
+        });
     }
-
-    if (shareBtn) shareBtn.addEventListener('click', toggleShare);
-    if (shareClose) shareClose.addEventListener('click', () => sharePanel && sharePanel.classList.add('hidden'));
 
     function copyLink() {
         const doToast = () => {
-            // Use existing toast if available, else alert
             if (typeof mcToast !== 'undefined') {
                 mcToast('✓ নিউজ লিংক কপি হয়েছে');
             } else {
@@ -278,7 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (copyBtn) copyBtn.addEventListener('click', copyLink);
-    if (copyBtn2) copyBtn2.addEventListener('click', copyLink);
 
     if (commentJump && commentsSection) {
         commentJump.addEventListener('click', () => {

@@ -2898,48 +2898,8 @@
                 "publisher": { "@type": "Organization", "name": SITE.name }, "articleSection": cat.name, "inLanguage": "bn",
             };
 
-            // Share logic
-            const [showShare, setShowShare] = React.useState(false);
+            // Share / Copy logic - native share only, no custom modal
             const [copyDone, setCopyDone] = React.useState(false);
-            const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-            const shareTitle = n.title;
-
-            const doCopy = () => {
-                const ok = () => {
-                    setCopyDone(true);
-                    mcToast('✓ নিউজ লিংক কপি হয়েছে');
-                    setTimeout(() => setCopyDone(false), 2000);
-                };
-                try {
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(shareUrl).then(ok, ok);
-                    } else {
-                        const ta = document.createElement('textarea');
-                        ta.value = shareUrl;
-                        document.body.appendChild(ta);
-                        ta.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(ta);
-                        ok();
-                    }
-                } catch (e) { ok(); }
-            };
-
-            const shareLinks = {
-                facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
-                messenger: `fb-messenger://share?link=${encodeURIComponent(shareUrl)}`,
-                whatsapp: `https://wa.me/?text=${encodeURIComponent(shareTitle + ' ' + shareUrl)}`,
-                x: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
-                telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
-            };
-
-            const handleNativeShare = () => {
-                if (navigator.share) {
-                    navigator.share({ title: shareTitle, url: shareUrl }).catch(() => setShowShare(v => !v));
-                } else {
-                    setShowShare(v => !v);
-                }
-            };
 
             // Comment logic - simplified clean version
             const [cName, setCName] = React.useState('');
@@ -2948,13 +2908,6 @@
             const [showCommentForm, setShowCommentForm] = React.useState(false);
             const comments = api.getComments(n.id);
             const commentFormRef = React.useRef(null);
-
-            const scrollToComment = () => {
-                setShowCommentForm(true);
-                setTimeout(() => {
-                    if (commentFormRef.current) commentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            };
 
             const submitComment = (e) => {
                 e.preventDefault();
@@ -3035,58 +2988,44 @@
                         </section>
                     )}
 
-                    {/* Share Section - new small beautiful */}
+                    {/* Share / Copy / Comment - 3 buttons in same row, native share only */}
                     <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button onClick={handleNativeShare} className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <button onClick={() => {
+                                const url = typeof window !== 'undefined' ? window.location.href : '';
+                                if (navigator.share) {
+                                    navigator.share({ title: n.title, url: url }).catch(() => {});
+                                } else {
+                                    // Fallback: copy link if native share not available (no custom modal)
+                                    try {
+                                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                                            navigator.clipboard.writeText(url).then(() => mcToast('✓ নিউজ লিংক কপি হয়েছে')).catch(() => {});
+                                        }
+                                    } catch (e) {}
+                                }
+                            }} className="inline-flex items-center gap-2 rounded-full bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors shadow-sm">
                                 <i className="ph ph-share-network text-base"></i> শেয়ার করুন
                             </button>
-                            <button onClick={doCopy} className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold transition-colors ${copyDone ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
-                                <i className={`ph ${copyDone ? 'ph-check' : 'ph-link'}`}></i> {copyDone ? 'কপি হয়েছে' : '🔗 কপি লিংক'}
+                            <button onClick={() => {
+                                const url = typeof window !== 'undefined' ? window.location.href : '';
+                                const ok = () => { setCopyDone(true); mcToast('✓ নিউজ লিংক কপি হয়েছে'); setTimeout(() => setCopyDone(false), 2000); };
+                                try {
+                                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                                        navigator.clipboard.writeText(url).then(ok, ok);
+                                    } else {
+                                        const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok();
+                                    }
+                                } catch (e) { ok(); }
+                            }} className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-bold transition-colors ${copyDone ? 'border-emerald-500 bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'}`}>
+                                <i className={`ph ${copyDone ? 'ph-check' : 'ph-link'} text-base`}></i> কপি লিংক
+                            </button>
+                            <button onClick={() => {
+                                setShowCommentForm(true);
+                                setTimeout(() => { if (commentFormRef.current) commentFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+                            }} className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                <i className="ph ph-chat-circle text-base"></i> মন্তব্য করুন {comments.length > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{toBanglaNum(comments.length)}</span>}
                             </button>
                         </div>
-
-                        {showShare && (
-                            <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800 animate-fade-in-up">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">শেয়ার করুন</p>
-                                    <button onClick={() => setShowShare(false)} className="rounded-full p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><i className="ph ph-x text-lg"></i></button>
-                                </div>
-                                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
-                                    <a href={shareLinks.facebook} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#1877F2]/10 p-3 hover:bg-[#1877F2]/20 transition-colors">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2] text-white"><i className="ph-fill ph-facebook-logo text-xl"></i></span>
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Facebook</span>
-                                    </a>
-                                    <a href={shareLinks.messenger} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#0099FF]/10 p-3 hover:bg-[#0099FF]/20 transition-colors">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0099FF] text-white"><i className="ph-fill ph-messenger-logo text-xl"></i></span>
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Messenger</span>
-                                    </a>
-                                    <a href={shareLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#25D366]/10 p-3 hover:bg-[#25D366]/20 transition-colors">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#25D366] text-white"><i className="ph-fill ph-whatsapp-logo text-xl"></i></span>
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">WhatsApp</span>
-                                    </a>
-                                    <a href={shareLinks.x} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-900/10 p-3 hover:bg-gray-900/20 dark:bg-white/10 dark:hover:bg-white/20 transition-colors">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900"><i className="ph ph-x-logo text-xl"></i></span>
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">X</span>
-                                    </a>
-                                    <a href={shareLinks.telegram} target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-1.5 rounded-xl bg-[#26A5E4]/10 p-3 hover:bg-[#26A5E4]/20 transition-colors">
-                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#26A5E4] text-white"><i className="ph-fill ph-telegram-logo text-xl"></i></span>
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Telegram</span>
-                                    </a>
-                                </div>
-                                <div className="mt-3 flex gap-2">
-                                    <input readOnly value={shareUrl} className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300" />
-                                    <button onClick={doCopy} className="rounded-lg bg-gray-900 px-4 py-2 text-xs font-bold text-white dark:bg-white dark:text-gray-900">কপি</button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Comment Button - small clean */}
-                    <div className="mt-6">
-                        <button onClick={scrollToComment} className="inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 transition-colors">
-                            💬 মন্তব্য করুন {comments.length > 0 && <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs dark:bg-gray-700">{toBanglaNum(comments.length)}</span>}
-                        </button>
                     </div>
 
                     {/* Comment Form */}
