@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\SanitizeInput::class,
             \App\Http\Middleware\ShareSiteData::class,
+            \App\Http\Middleware\CheckMaintenanceMode::class,
             \App\Http\Middleware\SecurityHeaders::class,
             \Illuminate\Session\Middleware\AuthenticateSession::class,
         ]);

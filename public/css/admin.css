@@ -20,3 +20,11 @@ body{font-family:'Hind Siliguri','Inter',sans-serif}
 .mc-btn-primary{background:#E21D2B;color:#fff}.mc-btn-primary:hover{background:#B9121E}
 .mc-btn-ghost{background:#f1f5f9;color:#334155}.dark .mc-btn-ghost{background:#1e293b;color:#cbd5e1}
 .mc-card{border:1px solid #e2e8f0;background:#fff;border-radius:.75rem}.dark .mc-card{border-color:#1e293b;background:#0F172A}
+
+/* বিপজ্জনক অ্যাকশন বোতাম ও ছোট ব্যাজ — ভিউতে বহু জায়গায় ব্যবহৃত, আগে স্টাইল ছিল না */
+.mc-btn-danger{background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA}
+.mc-btn-danger:hover{background:#E21D2B;border-color:#E21D2B;color:#fff}
+.dark .mc-btn-danger{background:rgba(127,29,29,.45);color:#FCA5A5;border-color:rgba(153,27,27,.6)}
+.dark .mc-btn-danger:hover{background:#E21D2B;color:#fff}
+.mc-badge{display:inline-flex;align-items:center;gap:.25rem;border-radius:999px;padding:.1rem .55rem;font-size:10px;font-weight:800;background:#F1F5F9;color:#334155;border:1px solid #E2E8F0}
+.dark .mc-badge{background:#0F172A;color:#CBD5E1;border-color:#334155}

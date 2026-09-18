@@ -35,7 +35,7 @@
             <input type="hidden" name="location" value="{{ $location }}">
             <x-admin.field-select name="parent_id" label="প্যারেন্ট আইটেম" placeholder="— মূল মেনু —" :options="$menus->pluck('label','id')->all()" />
             <x-admin.field-input name="label" label="মেনু লেবেল" required placeholder="যেমন: মহালছড়ি" />
-            <x-admin.field-select name="link_type" label="লিংকের ধরন" :options="['url'=>'কাস্টম URL','category'=>'ক্যাটাগরি','page'=>'স্ট্যাটিক পেজ']" selected="url" required />
+            <x-admin.field-select name="link_type" label="লিংকের ধরন" :options="['url'=>'কাস্টম URL','category'=>'ক্যাটাগরি','page'=>'স্ট্যাটিক পেজ','external'=>'বাহ্যিক লিংক']" selected="url" required />
             <div id="urlBox"><x-admin.field-input name="url" label="URL" placeholder="/news অথবা https://…" hint="অভ্যন্তরীণ লিংকের জন্য / দিয়ে শুরু করুন" /></div>
             <div id="refBox" class="hidden">
                 <x-admin.field-select name="reference_id" label="রেফারেন্স" placeholder="— নির্বাচন করুন —"

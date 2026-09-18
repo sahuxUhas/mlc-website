@@ -16,7 +16,7 @@ class CategoryController extends Controller
             ->with(['category:id,name,slug,color', 'reporter:id,name,slug'])
             ->forCategory($category)
             ->latestFirst()
-            ->paginate(15)
+            ->paginate(mc_per_page())
             ->withQueryString();
 
         $subcategories = $category->children()->visible()->get();

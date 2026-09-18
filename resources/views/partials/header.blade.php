@@ -5,10 +5,20 @@
     $prefix      = site_setting('site_prefix', 'দৈনিক');
     $tagline     = site_setting('site_tagline', 'পাহাড়ের কথা বলে');
     $domain      = site_setting('site_domain', 'mahalcharinews.com');
-    $logoUrl     = site_setting('site_logo') ? asset(site_setting('site_logo')) : mc_placeholder_svg();
+    $logoUrl     = mc_image(site_setting('site_logo'));
+
+    // অ্যাডমিন প্যানেল → সাইট সেটিংস → হেডার থেকে নিয়ন্ত্রিত
+    $sticky       = mc_flag('header_sticky');
+    $showDate     = mc_flag('header_show_date');
+    $showClock    = mc_flag('header_show_clock');
+    $showTheme    = mc_flag('header_show_theme_toggle');
+    $showSearch   = mc_flag('header_show_search');
+    $liveLabel    = site_setting('header_live_label', 'লাইভ টিভি');
+    $liveUrl      = site_setting('header_live_url') ?: route('videos.index');
+    $moreLabel    = (string) site_setting('header_more_label', 'আরও');
 @endphp
 
-<header id="site-header" class="sticky top-0 z-[80] border-b border-gray-200 bg-white/95 backdrop-blur transition-colors duration-200 dark:border-[#263246] dark:bg-[#0D1422]/95">
+<header id="site-header" class="{{ $sticky ? 'sticky top-0' : 'relative' }} z-[80] border-b border-gray-200 bg-white/95 backdrop-blur transition-colors duration-200 dark:border-[#263246] dark:bg-[#0D1422]/95">
     <div class="container mx-auto px-3 sm:px-4">
         <div class="flex items-center justify-between gap-3 py-2 md:py-3">
             {{-- লোগো + ওয়ার্ডমার্ক --}}
@@ -31,21 +41,31 @@
 
             {{-- ডান পাশের কন্ট্রোল --}}
             <div class="flex shrink-0 items-center gap-2 md:gap-2.5">
-                <span class="mr-1 hidden text-right leading-tight lg:block">
-                    <span class="block text-[11px] font-medium text-gray-500 dark:text-[#94A3B8]" data-mc-date>{{ bn_day_date() }}</span>
-                    <span class="block text-[11px] font-bold text-[#D50E18]">আপডেট: <span data-mc-clock>--:--</span></span>
-                </span>
+                @if($showDate || $showClock)
+                    <span class="mr-1 hidden text-right leading-tight lg:block">
+                        @if($showDate)
+                            <span class="block text-[11px] font-medium text-gray-500 dark:text-[#94A3B8]" data-mc-date>{{ bn_day_date() }}</span>
+                        @endif
+                        @if($showClock)
+                            <span class="block text-[11px] font-bold text-[#D50E18]">আপডেট: <span data-mc-clock>--:--</span></span>
+                        @endif
+                    </span>
+                @endif
 
                 {{-- থিম টগল --}}
-                <button type="button" data-mc-theme-toggle class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#22C55E]" aria-label="থিম পরিবর্তন" title="ডার্ক/লাইট মোড">
-                    <i class="ph-bold ph-moon text-[20px] dark:hidden"></i>
-                    <i class="ph-bold ph-sun hidden text-[20px] text-amber-400 dark:block"></i>
-                </button>
+                @if($showTheme)
+                    <button type="button" data-mc-theme-toggle class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#22C55E]" aria-label="থিম পরিবর্তন" title="ডার্ক/লাইট মোড">
+                        <i class="ph-bold ph-moon text-[20px] dark:hidden"></i>
+                        <i class="ph-bold ph-sun hidden text-[20px] text-amber-400 dark:block"></i>
+                    </button>
+                @endif
 
                 {{-- সার্চ --}}
-                <button type="button" data-mc-search-open class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#F1F5F9]" aria-label="খুঁজুন" title="খুঁজুন">
-                    <i class="ph ph-magnifying-glass text-[19px]"></i>
-                </button>
+                @if($showSearch)
+                    <button type="button" data-mc-search-open class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#F1F5F9]" aria-label="খুঁজুন" title="খুঁজুন">
+                        <i class="ph ph-magnifying-glass text-[19px]"></i>
+                    </button>
+                @endif
 
                 {{-- মেনু --}}
                 <button type="button" data-mc-menu-open class="mc-icon-btn dark:border-[#263246] dark:bg-[#182233] dark:text-[#F1F5F9]" aria-label="সব মেনু" title="সব মেনু">
@@ -76,9 +96,10 @@
                 @endforeach
 
                 {{-- "আরও" ড্রপডাউন (মেনু ম্যানেজার থেকে নিয়ন্ত্রিত) --}}
+                @if($moreLabel)
                 <li class="group relative">
                     <button type="button" class="flex h-full items-center gap-1 px-3.5 py-2.5 text-[13px] font-semibold hover:bg-[#D50E18]">
-                        আরও <i class="ph ph-caret-down text-[10px]"></i>
+                        {{ $moreLabel }} <i class="ph ph-caret-down text-[10px]"></i>
                     </button>
                     <div class="invisible absolute left-0 top-full z-50 w-52 rounded-b-lg border border-gray-100 bg-white opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100 dark:border-gray-700 dark:bg-[#182233]">
                         @forelse(($menu_more ?? collect()) as $item)
@@ -96,16 +117,19 @@
                         @endforelse
                     </div>
                 </li>
+                @endif
             </ul>
 
             <div class="flex items-center gap-3 py-2.5">
-                <a href="{{ route('videos.index') }}" class="flex items-center gap-2 rounded-full bg-red-600/15 px-3 py-1 text-[12px] font-bold text-red-400 ring-1 ring-red-500/40 hover:bg-[#D50E18] hover:text-white">
-                    <span class="relative flex h-2 w-2">
-                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
-                    </span>
-                    লাইভ টিভি
-                </a>
+                @if($liveLabel)
+                    <a href="{{ $liveUrl }}" class="flex items-center gap-2 rounded-full bg-red-600/15 px-3 py-1 text-[12px] font-bold text-red-400 ring-1 ring-red-500/40 hover:bg-[#D50E18] hover:text-white">
+                        <span class="relative flex h-2 w-2">
+                            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                        </span>
+                        {{ $liveLabel }}
+                    </a>
+                @endif
                 <span class="hidden h-5 w-px bg-white/20 xl:block"></span>
                 @auth
                     <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-1.5 text-[13px] font-semibold text-gray-200 hover:text-white">
@@ -149,6 +173,10 @@
                 <li><a href="{{ route('announcements.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-red-50 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:bg-[#182233]"><i class="ph ph-megaphone text-lg"></i> ঘোষণা</a></li>
                 <li><a href="{{ route('epaper.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-red-50 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:bg-[#182233]"><i class="ph ph-newspaper text-lg"></i> ই-পেপার</a></li>
                 <li><a href="{{ route('reporters.index') }}" class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-red-50 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:bg-[#182233]"><i class="ph ph-user-focus text-lg"></i> রিপোর্টার</a></li>
+
+                @foreach(($menu_top_bar ?? collect()) as $item)
+                    <li><a href="{{ $item->href }}" target="{{ $item->open_in_new_tab ? '_blank' : '_self' }}" class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-red-50 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:bg-[#182233]"><i class="ph {{ $item->icon ?: 'ph-link' }} text-lg"></i> {{ $item->label }}</a></li>
+                @endforeach
 
                 <li class="my-2 border-t border-gray-200 dark:border-[#263246]"></li>
                 <li><a href="{{ route('about') }}" class="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-red-50 hover:text-[#D50E18] dark:text-[#F1F5F9] dark:hover:bg-[#182233]"><i class="ph ph-info text-lg"></i> আমাদের সম্পর্কে</a></li>

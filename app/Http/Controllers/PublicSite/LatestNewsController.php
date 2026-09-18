@@ -13,7 +13,7 @@ class LatestNewsController extends Controller
         $posts = Post::published()
             ->with(['category:id,name,slug,color', 'reporter:id,name,slug'])
             ->latestFirst()
-            ->paginate(15)
+            ->paginate(mc_per_page())
             ->withQueryString();
 
         return view('public.latest', compact('posts'));

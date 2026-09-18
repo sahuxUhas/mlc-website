@@ -63,6 +63,19 @@ class MenuController extends Controller
 
     private function validateMenu(Request $request, ?Menu $menu = null): array
     {
+        // ফর্ম থেকে আসা 'url' আসলে অভ্যন্তরীণ লিংক — মডেলের 'internal' এর সমতুল্য
+        $linkType = (string) $request->input('link_type', 'internal');
+        if ($linkType === 'url') {
+            $request->merge(['link_type' => 'internal']);
+        }
+
+        // রেফারেন্স ড্রপডাউন "c12" / "p5" ফরম্যাটে পাঠায় — শুধু আইডিটি রাখা হয়
+        $reference = (string) $request->input('reference_id', '');
+        if ($reference !== '') {
+            $digits = preg_replace('/\D/', '', $reference);
+            $request->merge(['reference_id' => $digits !== '' ? (int) $digits : null]);
+        }
+
         $data = $request->validate([
             'location'        => ['required', Rule::in(array_keys(Menu::LOCATIONS))],
             'parent_id'       => ['nullable', 'integer', 'exists:menus,id'],

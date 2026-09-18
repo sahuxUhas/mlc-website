@@ -37,7 +37,8 @@
 </head>
 <body>
     <div class="mc-err-card">
-        <div class="mc-err-icon">{{ $icon }}</div>
+        {{-- $icon শুধু ভিউ থেকে আসে (কোনো ব্যবহারকারীর ইনপুট নয়) — তাই কাঁচা আউটপুট নিরাপদ --}}
+        <div class="mc-err-icon">{!! $icon !!}</div>
         <div class="mc-err-code">{{ $code }}</div>
         <h1 class="mc-err-title">{{ $title }}</h1>
         <p class="mc-err-msg">{{ $message }}</p>

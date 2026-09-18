@@ -1,5 +1,8 @@
 {{-- ===== ব্রেকিং নিউজ বার (অ্যাডমিন → ব্রেকিং নিউজ থেকে নিয়ন্ত্রিত) ===== --}}
-@php $items = ($breakingItems ?? collect())->filter(fn($b) => $b->is_enabled); @endphp
+@php
+    $items = ($breakingItems ?? collect())->filter(fn($b) => $b->is_enabled);
+    $breakingLabel = site_setting('breaking_label', 'ব্রেকিং');
+@endphp
 @if($items->isNotEmpty())
 <div class="ticker-wrap border-b border-red-100 bg-white dark:border-[#263246] dark:bg-[#182233]">
     <div class="container mx-auto flex items-stretch gap-0 px-0 sm:px-4">
@@ -8,7 +11,7 @@
                 <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
                 <span class="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
             </span>
-            ব্রেকিং
+            {{ $breakingLabel }}
         </div>
         <div class="ticker flex items-center py-1.5 text-[13px] font-semibold text-gray-800 dark:text-[#F1F5F9]">
             @foreach($items as $item)
