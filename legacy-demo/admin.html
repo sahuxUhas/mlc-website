@@ -318,6 +318,30 @@
         // Context for Admin State
         const AdminContext = React.createContext();
 
+        /* ============================================================
+           ছবি কেবল সরাসরি ফাইল আপলোডে — অ্যাডমিন প্যানেলে কোনো “ছবির URL” নেই
+           (ImgBB-এর মতো হোস্টিং API-তে যায়; DB/UI-তে raw লিংক দেখানো হয় না)
+           ============================================================ */
+        const MC_AD_IMG_KEYS = ['image', 'src', 'photo', 'thumb', 'thumbnail', 'cover', 'og', 'logo', 'favicon', 'avatar', 'banner', 'poster'];
+        const mcIsImageKey = (key) => MC_AD_IMG_KEYS.includes(String(key || '').toLowerCase());
+        const mcPickImageFile = (e, setter, toast) => {
+            const input = e && e.target ? e.target : null;
+            const f = input && input.files ? input.files[0] : null;
+            if (input) input.value = '';
+            if (!f) return;
+            const ext = String(f.name || '').split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'webp'].indexOf(ext) === -1) { toast && toast('শুধু JPG/JPEG/PNG/WEBP ছবি গ্রহণ করা হয়', 'error'); return; }
+            if (f.size > 5 * 1024 * 1024) { toast && toast('ছবির সাইজ সর্বোচ্চ ৫ MB', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = () => { setter(String(reader.result)); toast && toast('ছবি আপলোড হয়েছে'); };
+            reader.onerror = () => toast && toast('ছবি আপলোড করা যায়নি — আবার চেষ্টা করুন', 'error');
+            reader.readAsDataURL(f);
+        };
+        // প্রিভিউ — আপলোডের পর শুধু ছবি দেখা যায়, কোনো লিংক টেক্সট নয়
+        const mcImgPreview = (src, cls) => (src
+            ? <div className={'overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 ' + (cls || '')}><img src={src} alt="" className="max-h-40 w-full object-contain" /></div>
+            : null);
+
         const AdminProvider = ({ children }) => {
             const [db, setDb] = useState(() => loadAdminDB());
             const [activeTab, setActiveTab] = useState('dashboard');
@@ -1444,7 +1468,7 @@
 
         // Full Featured News Editor Modal
         const NewsEditorModal = ({ news, isOpen, onClose, onSave }) => {
-            const { db } = React.useContext(AdminContext);
+            const { db, showToast } = React.useContext(AdminContext);
             const [form, setForm] = useState(news);
             const [tagInput, setTagInput] = useState((news.tags || []).join(', '));
 
@@ -1460,14 +1484,15 @@
                 setForm(updated);
             };
 
-            const handleGalleryAdd = () => {
-                const url = prompt('নতুন ছবির URL দিন:');
-                if (!url) return;
-                const caption = prompt('ছবির ক্যাপশন দিন (ঐচ্ছিক):') || '';
-                setForm(prev => ({
-                    ...prev,
-                    gallery: [...(prev.gallery || []), { src: url, caption }]
-                }));
+            // গ্যালারিতে ছবি শুধু সরাসরি ফাইল আপলোড থেকেই যোগ হয় (কোনো URL নয়)
+            const galleryFileRef = React.useRef(null);
+            const handleGalleryAdd = (e) => {
+                mcPickImageFile(e, (src) => {
+                    setForm(prev => ({
+                        ...prev,
+                        gallery: [...(prev.gallery || []), { src, caption: '' }]
+                    }));
+                }, showToast);
             };
 
             const handleGalleryMove = (index, dir) => {
@@ -1569,13 +1594,16 @@
                                             <i className="ph-bold ph-images text-brand-red"></i>
                                             সংবাদের অতিরিক্ত ফটো গ্যালারি (Multiple Images)
                                         </span>
-                                        <button
-                                            type="button"
-                                            onClick={handleGalleryAdd}
-                                            className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-brand-red hover:text-white text-[11px] font-bold transition-colors"
-                                        >
-                                            + ছবি যোগ করুন
-                                        </button>
+                                        <span className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => galleryFileRef.current && galleryFileRef.current.click()}
+                                                className="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-brand-red hover:text-white text-[11px] font-bold transition-colors"
+                                            >
+                                                + ছবি আপলোড করুন
+                                            </button>
+                                            <input ref={galleryFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleGalleryAdd} />
+                                        </span>
                                     </div>
                                     {form.gallery && form.gallery.length > 0 ? (
                                         <div className="space-y-2">
@@ -1583,7 +1611,7 @@
                                                 <div key={idx} className="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
                                                     <img src={g.src} alt="" className="h-10 w-14 object-cover rounded shrink-0 bg-slate-100" />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">{g.src}</p>
+                                                        <p className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">{'ছবি ' + (idx + 1)}</p>
                                                         <input
                                                             type="text"
                                                             value={g.caption || ''}
@@ -1628,13 +1656,15 @@
                                             <img src={form.image} alt="Preview" className="h-full w-full object-cover" />
                                         </div>
                                     )}
-                                    <input
-                                        type="text"
-                                        value={form.image || ''}
-                                        onChange={(e) => setForm({ ...form, image: e.target.value })}
-                                        placeholder="ছবির URL দিন..."
-                                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none"
-                                    />
+                                    <label className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none flex cursor-pointer items-center justify-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                                        <i className="ph ph-upload-simple"></i> ছবি আপলোড করুন
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => mcPickImageFile(e, (v) => setForm({ ...form, image: v }), showToast)}
+                                        />
+                                    </label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -2121,13 +2151,17 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">ছবির URL</label>
-                                    <input
-                                        type="text"
-                                        value={editingRep.photo || ''}
-                                        onChange={(e) => setEditingRep({ ...editingRep, photo: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none"
-                                    />
+                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">প্রোফাইল ছবি</label>
+                                    {mcImgPreview(editingRep.photo, 'mb-2')}
+                                    <label className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none flex cursor-pointer items-center justify-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                                        <i className="ph ph-upload-simple"></i> ছবি আপলোড করুন
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => mcPickImageFile(e, (v) => setEditingRep({ ...editingRep, photo: v }), showToast)}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
@@ -2173,7 +2207,7 @@
         // 8. MODULE: MEDIA LIBRARY
         // =====================================================================
         const MediaModule = () => {
-            const { db, showToast } = React.useContext(AdminContext);
+            const { db, showToast, mutate } = React.useContext(AdminContext);
             const [search, setSearch] = useState('');
             const [selectedFolder, setSelectedFolder] = useState('all');
             const [previewImage, setPreviewImage] = useState(null);
@@ -2199,9 +2233,18 @@
                 return list;
             }, [db]);
 
-            const copyUrl = (url) => {
-                navigator.clipboard.writeText(url);
-                showToast('ছবির URL ক্লিপবোর্ডে কপি হয়েছে!');
+            // নিরাপত্তা: ছবির raw লিংক UI-তে দেখানো বা কপি করার সুবিধা নেই।
+            // “প্রধান ছবি করুন” — সর্বশেষ সংবাদের Featured Image সেট করে (ডেমো স্টোর)
+            const setAsFeatured = (m) => {
+                const target = (db.news || [])[0];
+                if (!target) { showToast('কোনো সংবাদ পাওয়া যায়নি', 'error'); return; }
+                mutate('update', 'news', target.title, (d) => {
+                    const x = d.news.find(y => String(y.id) === String(target.id));
+                    if (!x) return;
+                    x.image = m.url;
+                    x.imageCaption = m.title || x.imageCaption;
+                });
+                showToast('সর্বশেষ সংবাদের প্রধান ছবি ঠিক হয়েছে');
             };
 
             const filteredMedia = mediaList.filter(m => {
@@ -2260,11 +2303,11 @@
                                     <p className="text-[10px] text-white font-medium line-clamp-2">{m.title}</p>
                                     <div className="flex items-center justify-center gap-2">
                                         <button
-                                            onClick={() => copyUrl(m.url)}
+                                            onClick={() => setAsFeatured(m)}
                                             className="p-1.5 rounded-lg bg-white/20 hover:bg-white text-white hover:text-slate-900 transition-colors"
-                                            title="URL কপি করুন"
+                                            title="প্রধান ছবি করুন"
                                         >
-                                            <i className="ph-bold ph-copy text-sm"></i>
+                                            <i className="ph-bold ph-star text-sm"></i>
                                         </button>
                                         <button
                                             onClick={() => setPreviewImage(m.url)}
@@ -2283,15 +2326,9 @@
                         <Modal title="ছবির প্রিভিউ" isOpen={!!previewImage} onClose={() => setPreviewImage(null)} maxWidth="max-w-2xl">
                             <div className="space-y-4">
                                 <img src={previewImage} alt="" className="w-full rounded-xl object-contain max-h-[60vh] mx-auto" />
-                                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800">
-                                    <span className="text-xs font-mono text-slate-600 dark:text-slate-400 truncate flex-1 mr-3">{previewImage}</span>
-                                    <button
-                                        onClick={() => copyUrl(previewImage)}
-                                        className="px-3 py-1.5 rounded-lg bg-brand-red text-white text-xs font-bold"
-                                    >
-                                        কপি লিঙ্ক
-                                    </button>
-                                </div>
+                                <p className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-500 dark:text-slate-400">
+                                    নিরাপত্তার কারণে ছবির মূল লিংক কোথাও দেখানো বা কপি করা যায় না — চাইলে ফাইলটি আবার আপলোড করুন।
+                                </p>
                             </div>
                         </Modal>
                     )}
@@ -3229,14 +3266,17 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">বিজ্ঞাপনের ছবির URL</label>
-                                    <input
-                                        type="text"
-                                        value={editingAd.src || ''}
-                                        onChange={(e) => setEditingAd({ ...editingAd, src: e.target.value })}
-                                        placeholder="https://..."
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none"
-                                    />
+                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">বিজ্ঞাপনের ছবি</label>
+                                    {mcImgPreview(editingAd.src, 'mb-2')}
+                                    <label className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none flex cursor-pointer items-center justify-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                                        <i className="ph ph-upload-simple"></i> ছবি আপলোড করুন
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => mcPickImageFile(e, (v) => setEditingAd({ ...editingAd, src: v }), showToast)}
+                                        />
+                                    </label>
                                 </div>
                                 <div>
                                     <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">ক্লিক টার্গেট লিংক (URL)</label>
@@ -3306,14 +3346,15 @@
                 showToast('অ্যালবাম মুছে ফেলা হয়েছে!');
             };
 
-            const handleAddPhoto = () => {
-                const src = prompt('ছবির URL দিন:');
-                if (!src) return;
-                const caption = prompt('ছবির ক্যাপশন দিন:') || '';
-                setEditingAlbum(prev => ({
-                    ...prev,
-                    images: [...(prev.images || []), { id: 'img_' + Date.now(), src, caption, credit: 'মহালছড়ি নিউজ' }]
-                }));
+            // অ্যালবামে ছবি শুধু সরাসরি ফাইল আপলোডে (কোনো URL নয়)
+            const albumFileRef = React.useRef(null);
+            const handleAddPhoto = (e) => {
+                mcPickImageFile(e, (src) => {
+                    setEditingAlbum(prev => ({
+                        ...prev,
+                        images: [...(prev.images || []), { id: 'img_' + Date.now(), src, caption: '', credit: 'মহালছড়ি নিউজ' }]
+                    }));
+                }, showToast);
             };
 
             return (
@@ -3380,13 +3421,17 @@
                                     />
                                 </div>
                                 <div>
-                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">কভার ছবির URL</label>
-                                    <input
-                                        type="text"
-                                        value={editingAlbum.cover || ''}
-                                        onChange={(e) => setEditingAlbum({ ...editingAlbum, cover: e.target.value })}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none"
-                                    />
+                                    <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">কভার ছবি</label>
+                                    {mcImgPreview(editingAlbum.cover, 'mb-2')}
+                                    <label className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none flex cursor-pointer items-center justify-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                                        <i className="ph ph-upload-simple"></i> কভার ছবি আপলোড করুন
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => mcPickImageFile(e, (v) => setEditingAlbum({ ...editingAlbum, cover: v }), showToast)}
+                                        />
+                                    </label>
                                 </div>
                                 <div>
                                     <label className="block font-bold text-slate-800 dark:text-slate-200 mb-1">বিবরণ</label>
@@ -3404,11 +3449,12 @@
                                         <span className="font-bold text-slate-800 dark:text-slate-200">অ্যালবামের ছবিসমূহ ({editingAlbum.images ? editingAlbum.images.length : 0})</span>
                                         <button
                                             type="button"
-                                            onClick={handleAddPhoto}
+                                            onClick={() => albumFileRef.current && albumFileRef.current.click()}
                                             className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-brand-red hover:text-white font-bold transition-colors"
                                         >
-                                            + ছবি যোগ করুন
+                                            + ছবি আপলোড করুন
                                         </button>
+                                        <input ref={albumFileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAddPhoto} />
                                     </div>
                                     <div className="grid grid-cols-3 gap-3">
                                         {(editingAlbum.images || []).map((img, idx) => (
