@@ -22,7 +22,7 @@ class PostFactory extends Factory
             'is_featured'    => false,
             'is_breaking'    => false,
             'allow_comments' => true,
-            'views'          => 0,
+            // 'views' দিই না — পঠনসংখ্যা শুধু বাস্তব ভিজিট থেকে আসে (ডিফল্ট ০)
         ];
     }
 

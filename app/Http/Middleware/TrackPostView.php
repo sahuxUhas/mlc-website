@@ -3,55 +3,95 @@
 namespace App\Http\Middleware;
 
 use App\Models\Post;
+use App\Models\Video;
+use App\Support\ViewCounter;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * ভিউ কাউন্টার — একই সেশনে একই সংবাদ বারবার গুনা হয় না।
- * রাউটে মডেল বাইন্ডিং ({slug}) ব্যবহার হওয়ায় এখানে স্লাগ থেকে মডেল খোঁজা হয়,
- * ফলে অতিরিক্ত কুয়েরি লাগে না (কন্ট্রোলার ইতিমধ্যে একই রেকর্ড লোড করে)।
+ * ভিউ কাউন্টার — শুধুমাত্র বাস্তব ভিজিট গোনা হয়।
+ *
+ * কীভাবে:
+ *   - পেজ সফলভাবে রেন্ডার হওয়ার **পরে** গোনা হয়, তাই ৪০৪/রিডাইরেক্ট
+ *     (খসড়া সংবাদ, ভাঙা লিংক) ভুল করে ভিউ যোগ করে না।
+ *   - শুধু GET রিকোয়েস্ট; বট/ক্রলার/মনিটরিং টুল বাদ (config/views.php)।
+ *   - একই ভিজিটর একবারই গোনা হয় — সেশন + সময়ভিত্তিক কুলডাউন (ViewCounter)।
+ *
+ * রাউটে মডেল বাইন্ডিং ({slug}) থাকলে সেটিই ব্যবহার হয় ⇒ অতিরিক্ত কুয়েরি নেই।
  */
 class TrackPostView
 {
-    public function handle(Request $request, Closure $next): Response
+    public function __construct(private ViewCounter $counter)
     {
-        $this->countView($request);
-
-        return $next($request);
     }
 
-    private function countView(Request $request): void
+    public function handle(Request $request, Closure $next): Response
     {
-        // কন্ট্রোলার মডেল বাইন্ড করলে সরাসরি সেটিই ব্যবহার হয়
+        $response = $next($request);
+
+        if (! $this->shouldCount($request, $response)) {
+            return $response;
+        }
+
+        $model = $this->resolveModel($request);
+
+        if (! $model || ! $this->isCountable($model)) {
+            return $response;
+        }
+
+        $this->counter->record($request, $model);
+
+        return $response;
+    }
+
+    /** শুধু সফল GET পেজ ভিজিট গোনা হয় */
+    private function shouldCount(Request $request, Response $response): bool
+    {
+        if (! $request->isMethod('GET') || $response->isRedirection() || ! $response->isSuccessful()) {
+            return false;
+        }
+
+        if ((bool) config('views.count_bots', false)) {
+            return true;
+        }
+
+        return ! ViewCounter::isBot($request->userAgent());
+    }
+
+    /** রাউট বাইন্ডিং বা {slug} থেকে সংবাদ/ভিডিও মডেল */
+    private function resolveModel(Request $request): ?Model
+    {
         $model = $request->route('post') ?? $request->route('video') ?? $request->route('news');
 
-        // না পেলে রাউটের {slug} প্যারামিটার থেকে খোঁজা হয়
-        if (! $model instanceof \Illuminate\Database\Eloquent\Model) {
-            $slug = $request->route('slug');
-
-            if (! $slug) {
-                return;
-            }
-
-            $model = $request->routeIs('videos.*')
-                ? \App\Models\Video::where('slug', $slug)->first()
-                : Post::where('slug', $slug)->first();
+        if ($model instanceof Model) {
+            return $model;
         }
 
-        if (! $model || ! $model->id) {
-            return;
+        $slug = $request->route('slug');
+
+        if (! $slug) {
+            return null;
         }
 
-        // সেশন-ভিত্তিক ডিডুপ্লিকেশন — একই ভিজিটর বারবার গুনা হবে না
-        $key = 'mc_viewed_'.class_basename($model).'_'.$model->id;
+        return $request->routeIs('videos.*')
+            ? Video::where('slug', $slug)->first()
+            : Post::where('slug', $slug)->first();
+    }
 
-        if ($request->session()->has($key)) {
-            return;
+    /** প্রকাশিত (ও দৃশ্যমান) কনটেন্টই গোনা হয় */
+    private function isCountable(Model $model): bool
+    {
+        if ($model instanceof Post) {
+            // Post::getIsLiveAttribute() — status published + প্রকাশের সময় পেরিয়ে গেছে
+            return (bool) $model->is_live;
         }
 
-        $request->session()->put($key, now()->toDateTimeString());
+        if ($model instanceof Video) {
+            return $model->status === 'published' && (bool) $model->is_visible;
+        }
 
-        $model->increment('views');
+        return true;
     }
 }

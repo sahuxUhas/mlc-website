@@ -26,7 +26,9 @@ class Post extends Model
         'title', 'slug', 'category_id', 'subcategory_id', 'reporter_id', 'author_id',
         'featured_image', 'featured_media_id', 'image_caption', 'image_credit', 'excerpt', 'content',
         'video_url', 'location', 'status', 'is_featured', 'is_breaking', 'allow_comments',
-        'published_at', 'scheduled_at', 'views', 'comments_count', 'sort_order',
+        // দ্রষ্টব্য: 'views' ইচ্ছাকৃতভাবে fillable নয় — পঠনসংখ্যা শুধু
+        // ভিজিট থেকে (ViewCounter) বাড়ে, কোনো ফর্ম/রিকোয়েস্ট থেকে নয়।
+        'published_at', 'scheduled_at', 'comments_count', 'sort_order',
         'meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description',
         'og_image', 'og_media_id', 'canonical_url',
     ];
@@ -277,9 +279,14 @@ class Post extends Model
         Category::where('id', $categoryId)->update(['posts_count' => $count]);
     }
 
-    public function incrementViews(): void
+    /**
+     * পঠনসংখ্যা ১ বাড়ানো (বাস্তব ভিজিটের জন্য)।
+     * সরাসরি SQL ইনক্রিমেন্ট — মডেল ইভেন্ট ফায়ার হয় না, তাই প্রতিটি ভিউতে
+     * পাবলিক ক্যাশ (হোম/নেভ/ব্রেকিং) অকারণে বাতিল হয় না, updated_at-ও বদলায় না।
+     */
+    public function incrementViews(int $amount = 1): void
     {
-        static::withoutTimestamps(fn () => $this->increment('views'));
+        app(\App\Support\ViewCounter::class)->increment($this, $amount);
     }
 
     /** সম্পর্কিত সংবাদ — একই ক্যাটাগরি, বর্তমানটি বাদে */
