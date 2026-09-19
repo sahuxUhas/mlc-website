@@ -3,6 +3,7 @@
 @props([
     'name', 'label', 'current' => null, 'required' => false, 'hint' => null,
     'removeName' => null, 'thumb' => null, 'providerLabel' => null, 'previewClass' => 'h-16 w-24',
+    'accept' => 'image/jpeg,image/png,image/webp',
 ])
 @php
     $hasCurrent = trim((string) $current) !== '';
@@ -29,7 +30,7 @@
         @endif
 
         <div class="min-w-0 flex-1">
-            <input id="{{ $name }}" name="{{ $name }}" type="file" accept="image/jpeg,image/png,image/webp"
+            <input id="{{ $name }}" name="{{ $name }}" type="file" accept="{{ $accept }}"
                    data-preview="#{{ $name }}-preview"
                    class="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-bold file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-800 dark:file:text-slate-200">
             <p class="mt-1 text-[11px] text-slate-500">{{ $hint }}</p>

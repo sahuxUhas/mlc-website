@@ -287,6 +287,97 @@ class NewsEditorTest extends TestCase
         $this->assertSame('{{media:'.Media::firstOrFail()->id.'}}', $response->json('images.0.key'));
     }
 
+    /* ---------------- পুরোনো Image URL/Link ইনপুট সম্পূর্ণ বাদ ---------------- */
+
+    public function test_image_url_strings_are_rejected_instead_of_being_saved(): void
+    {
+        $editor = $this->editor();
+
+        // প্রধান ছবি হিসেবে raw URL পাঠালে গ্রহণ করা হয় না
+        $this->actingAs($editor)->post('/admin/news', $this->payload([
+            'featured_image' => 'https://i.ibb.co/abcd1234/featured.jpg',
+        ]))->assertSessionHasErrors('featured_image');
+
+        $this->assertSame(0, Post::count());
+
+        // সোশ্যাল শেয়ার ছবি হিসেবেও নয়
+        $this->actingAs($editor)->post('/admin/news', $this->payload([
+            'action'   => 'publish',
+            'og_image' => 'https://example.com/og.jpg',
+        ]))->assertSessionHasErrors('og_image');
+
+        $this->assertSame(0, Post::count());
+
+        // গ্যালারিতে লিংকের তালিকা পাঠালেও নয়
+        $this->actingAs($editor)->post('/admin/news', $this->payload([
+            'images' => ['https://example.com/one.jpg'],
+        ]))->assertSessionHasErrors('images');
+
+        $this->assertSame(0, Post::count());
+    }
+
+    public function test_news_form_offers_only_direct_file_upload_for_images(): void
+    {
+        $editor = $this->editor();
+
+        $create = $this->actingAs($editor)->get('/admin/news/create')->assertOk()->getContent();
+
+        // featured + OG ছবি: শুধু ফাইল ইনপুট
+        $this->assertMatchesRegularExpression('/<input[^>]*name="featured_image"[^>]*type="file"/', $create);
+        $this->assertMatchesRegularExpression('/<input[^>]*name="og_image"[^>]*type="file"/', $create);
+
+        // গ্যালারি: একাধিক ফাইল একসাথে নির্বাচন (drag & drop জোন)
+        $this->assertStringContainsString('name="images[]"', $create);
+        $this->assertStringContainsString('data-news-dropzone', $create);
+
+        $this->assertNoImageUrlInput($create);
+
+        // এডিট পেজে প্রতিটি ছবির প্রিভিউ/রিমুভ/রিঅর্ডার নিয়ন্ত্রণ থাকে
+        $post = Post::factory()->create(['author_id' => $editor->id]);
+        $post->images()->create(['path' => 'news/gallery/a.jpg', 'sort_order' => 0]);
+
+        $edit = $this->actingAs($editor)->get('/admin/news/'.$post->slug.'/edit')->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-gallery-list', $edit);
+        $this->assertStringContainsString('data-move="up"', $edit);
+        $this->assertStringContainsString('data-delete-image', $edit);
+        $this->assertStringContainsString('data-set-featured', $edit);
+        $this->assertStringContainsString('data-order-input', $edit);
+
+        $this->assertNoImageUrlInput($edit);
+    }
+
+    /** ছবির জন্য কোনো URL/লিংক ইনপুট নেই — শুধু ফাইল আপলোড */
+    private function assertNoImageUrlInput(string $html): void
+    {
+        foreach (['featured_image_url', 'og_image_url', 'image_url', 'image_link', 'অথবা সরাসরি URL'] as $needle) {
+            $this->assertStringNotContainsString($needle, $html);
+        }
+
+        // কোনো URL-টাইপ ইনপুটই ছবির সাথে যুক্ত নয় (video_url/canonical_url বৈধ)
+        $this->assertDoesNotMatchRegularExpression(
+            '/<input[^>]*type="url"[^>]*name="[^"]*(image|photo|thumbnail|logo|favicon)[^"]*"/i',
+            $html
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/<input[^>]*name="[^"]*(image|photo|thumbnail|logo|favicon)[^"]*"[^>]*type="url"/i',
+            $html
+        );
+    }
+
+    public function test_site_settings_image_fields_have_no_url_input(): void
+    {
+        $html = $this->actingAs(User::factory()->superAdmin()->create())
+            ->get('/admin/settings')
+            ->assertOk()
+            ->getContent();
+
+        // লোগো/ফেভিকন কেবল আপলোড — পুরোনো “সরাসরি URL” ইনপুট সরানো হয়েছে
+        $this->assertStringNotContainsString('সরাসরি URL', $html);
+        $this->assertStringNotContainsString('site_logo_url', $html);
+        $this->assertMatchesRegularExpression('/<input[^>]*name="site_logo"[^>]*type="file"/', $html);
+    }
+
     /* ---------------- প্রাকদর্শন ---------------- */
 
     public function test_preview_page_renders_draft_news_for_its_author(): void

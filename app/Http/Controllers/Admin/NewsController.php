@@ -587,6 +587,9 @@ class NewsController extends Controller
         $user = $request->user();
         $canPublish = $user->can_manage('news.publish');
 
+        // ছবি কেবল সরাসরি আপলোড থেকেই নেওয়া হয় — Image URL/লিংক ইনপুট সম্পূর্ণ বাদ।
+        $this->rejectImageUrlInput($request);
+
         $validated = $request->validate([
             'title'               => ['required', 'string', 'min:3', 'max:191'],
             'slug'                => ['nullable', 'string', 'max:191', 'regex:/^[\p{L}\p{N}\-_]+$/u',
@@ -714,6 +717,34 @@ class NewsController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * ছবির ক্ষেত্রে টেক্সট/URL পাঠানোর চেষ্টা প্রত্যাখ্যান।
+     *
+     * কেন: অ্যাডমিন প্যানেল থেকে ছবি দেওয়ার একমাত্র উপায় সরাসরি ফাইল আপলোড
+     * (Backend → ImgBB → DB রেফারেন্স)। পুরোনো “Image URL / Link” ইনপুট ও তার
+     * লজিক সম্পূর্ণ সরানো হয়েছে, তাই হাতে করা রিকোয়েস্টেও raw URL সেভ হবে না।
+     */
+    private function rejectImageUrlInput(Request $request): void
+    {
+        $offenders = [];
+
+        foreach (['featured_image', 'og_image', 'image', 'image_url', 'featured_image_url', 'thumbnail', 'photo'] as $field) {
+            $value = $request->input($field);
+
+            if (is_string($value) && trim($value) !== '') {
+                $offenders[$field] = 'ছবি সরাসরি আপলোড করুন — Image URL/লিংক বসানোর সুবিধা নেই।';
+            }
+        }
+
+        if ($request->filled('images') && ! $request->hasFile('images')) {
+            $offenders['images'] = 'গ্যালারির ছবি ফাইল হিসেবে নির্বাচন করুন (লিংক নয়)।';
+        }
+
+        if ($offenders !== []) {
+            throw ValidationException::withMessages($offenders);
+        }
     }
 
     /** সাব-ক্যাটাগরি নির্বাচিত ক্যাটাগরির অধীন কি না */

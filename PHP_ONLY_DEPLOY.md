@@ -121,7 +121,8 @@ Missing entry-point
 ### Images Not Showing
 - `php artisan storage:link` চালান
 - `public/uploads/.gitkeep` আছে কিনা চেক
-- ImgBB enabled হলে `i.ibb.co` URL আসবে, সেটা normal
+- ছবি ImgBB তে থাকলে মিডিয়া লাইব্রেরিতে provider "ImgBB ক্লাউড হোস্টিং" দেখাবে — এটাই normal
+- ওয়েবসাইটে ছবির `src` হবে `/img/…?s=…` (নিজের ডোমেইন); raw hosting URL কোথাও দেখাবে না
 
 ### Database Connection Error
 - `.env` এ DB credentials ঠিক আছে কিনা

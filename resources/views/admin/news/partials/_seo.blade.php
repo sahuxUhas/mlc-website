@@ -1,4 +1,10 @@
 {{-- ================= SEO: মেটা, সোশ্যাল, SERP প্রাকদর্শন ================= --}}
+@php
+    // OG ছবির নির্দেশনা — ছবি কেবল সরাসরি আপলোড হয় (Image URL/Link ইনপুট নেই)
+    $ogImageHint = 'সরাসরি ফাইল আপলোড করুন — jpg, jpeg, png, webp; সর্বোচ্চ '
+        . bn_num(intdiv((int) config('images.max_kb', 4096), 1024))
+        . ' MB। লিংক/URL বসানোর সুবিধা নেই।';
+@endphp
 <div class="mc-card p-4">
     <h2 class="mb-4 flex items-center gap-2 font-serif text-sm font-bold text-slate-900 dark:text-white">
         <i class="ph ph-magnifying-glass text-[#E21D2B]"></i> SEO সেটিংস
@@ -55,7 +61,8 @@
                 <x-admin.field-textarea name="og_description" label="OG বিবরণ" :value="$post->og_description" :rows="2" :maxlength="500" />
                 <x-admin.field-image name="og_image" label="OG ছবি (১২০০×৬৩০ প্রস্তাবিত)"
                     :current="$post->og_image" :thumb="$post->og_image ? mc_image($post->og_image) : null"
-                    :removeName="$isEdit && ($post->og_image || $post->og_media_id) ? 'remove_og_image' : null" />
+                    :removeName="$isEdit && ($post->og_image || $post->og_media_id) ? 'remove_og_image' : null"
+                    :hint="$ogImageHint" />
                 <x-admin.field-input name="canonical_url" label="Canonical URL" type="url" :value="$post->canonical_url" placeholder="https://…" />
             </div>
         </details>
