@@ -3,7 +3,8 @@
     <x-admin.field-input name="title" label="বিজ্ঞাপনের নাম" :value="$ad->title" required hint="শুধু অ্যাডমিন প্যানেলে দেখা যায়" />
     <div class="grid grid-cols-2 gap-3"><x-admin.field-select name="position" label="পজিশন" :options="\App\Models\Advertisement::POSITIONS" :selected="$ad->position" required />
         <x-admin.field-select name="type" label="ধরন" :options="['image'=>'ছবি (ব্যানার)','html'=>'HTML কোড']" :selected="$ad->type" required /></div>
-    <x-admin.field-image name="image" label="ব্যানার ছবি" :current="$ad->image" hint="লিডারবোর্ড ৭২৮×৯০, সাইডবার ৩০০×২৫০ প্রস্তাবিত" />
+    <x-admin.field-image name="image" label="ব্যানার ছবি" :current="$ad->image"
+        accept="image/jpeg,image/png,image/webp,image/gif" hint="লিডারবোর্ড ৭২৮×৯০, সাইডবার ৩০০×২৫০ প্রস্তাবিত" />
     <x-admin.field-textarea name="html_code" label="HTML / এমবেড কোড" :value="$ad->html_code" :rows="4" hint="ধরন ‘HTML’ নির্বাচন করলে এই কোডটি দেখানো হবে" />
     <div class="grid grid-cols-2 gap-3"><x-admin.field-input name="link" label="ক্লিক লিংক" type="url" :value="$ad->link" placeholder="https://…" />
         <x-admin.field-select name="link_target" label="লিংক খোলার নিয়ম" :options="['_self'=>'একই ট্যাবে','_blank'=>'নতুন ট্যাবে']" :selected="$ad->link_target" /></div>

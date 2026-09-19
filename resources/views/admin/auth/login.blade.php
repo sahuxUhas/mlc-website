@@ -12,7 +12,7 @@
 <div class="w-full max-w-md">
     <div class="mb-6 text-center">
         <div class="mx-auto mb-3 inline-flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-[#C5E7C8] ring-1 ring-black/10">
-            <img src="{{ site_setting('site_logo') ? asset(site_setting('site_logo')) : mc_placeholder_svg() }}" alt="" class="h-full w-full object-cover">
+            <img src="{{ site_setting('site_logo') ? mc_image(site_setting('site_logo')) : mc_placeholder_svg() }}" alt="" class="h-full w-full object-cover">
         </div>
         <h1 class="font-serif text-2xl font-black text-slate-900 dark:text-white">{{ site_setting('site_prefix','দৈনিক') }} <span class="text-[#E21D2B]">{{ site_setting('site_name','মহালছড়ি নিউজ') }}</span></h1>
         <p class="mt-1 text-xs font-semibold text-[#1F7A3D] dark:text-[#22C55E]">{{ site_setting('site_tagline','পাহাড়ের কথা বলে') }}</p>

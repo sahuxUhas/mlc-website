@@ -201,10 +201,15 @@ if (! function_exists('mc_carbon')) {
 
 if (! function_exists('mc_image')) {
     /**
-     * ছবির সঠিক URL তৈরি করে — তিনটি ক্ষেত্র সামলায়:
-     *   1. সম্পূর্ণ URL (http/https/data:) → যেমন আছে তেমন
-     *   2. ইতিমধ্যে /uploads বা /storage দিয়ে শুরু → asset()
-     *   3. আপেক্ষিক পাথ → asset('uploads/…')
+     * ছবির ব্রাউজার-নিরাপদ URL তৈরি করে।
+     *
+     *   1. data: URI → যেমন আছে
+     *   2. remote URL (ImgBB ইত্যাদি) → নিজের ডোমেইনের signed proxy URL
+     *      (`/img/{token}?s=…`) ⇒ raw hosting URL কখনো HTML source/UI-তে যায় না
+     *      (config/images.php → proxy.enabled=false হলে raw URL ফেরত আসে)
+     *   3. /uploads বা /storage পাথ → asset()
+     *   4. আপেক্ষিক পাথ → asset('uploads/…')
+     *
      * খালি/ভুল পাথ হলে ব্র্যান্ডেড প্লেসহোল্ডার রিটার্ন করে (ভাঙা ছবি কখনো দেখায় না)।
      */
     function mc_image(?string $path, ?string $fallback = null): string
@@ -216,8 +221,12 @@ if (! function_exists('mc_image')) {
             return $fallback;
         }
 
-        if (preg_match('~^(https?:)?//|^data:~i', $path)) {
+        if (str_starts_with($path, 'data:')) {
             return $path;
+        }
+
+        if (preg_match('~^(https?:)?//~i', $path)) {
+            return \App\Support\ImageUrl::publicUrl($path) ?? $fallback;
         }
 
         if (str_starts_with($path, '/')) {
@@ -228,11 +237,43 @@ if (! function_exists('mc_image')) {
     }
 }
 
+if (! function_exists('mc_image_source')) {
+    /**
+     * সম্পূর্ণ পাথ না থাকলে বিকল্প (thumbnail) → মূল ছবি এই ক্রমে URL দেয়।
+     * অ্যাডমিন ও পাবলিক দুই জায়গাতেই ব্যবহার করা যায়।
+     */
+    function mc_image_source(?string $primary, ?string $secondary = null, ?string $fallback = null): string
+    {
+        if (trim((string) $primary) !== '') {
+            return mc_image($primary, $fallback);
+        }
+
+        return mc_image($secondary, $fallback);
+    }
+}
+
+if (! function_exists('mc_content')) {
+    /** সংবাদের HTML কনটেন্ট render (ছবির রেফারেন্স → signed proxy URL) */
+    function mc_content(?string $html): string
+    {
+        return \App\Support\ContentRenderer::render($html);
+    }
+}
+
+if (! function_exists('mc_plain')) {
+    /** HTML কনটেন্ট থেকে নিরাপদ প্লেইন টেক্সট (excerpt/সার্চ/মেটার জন্য) */
+    function mc_plain(?string $html): string
+    {
+        return \App\Support\ContentRenderer::toText($html);
+    }
+}
+
 if (! function_exists('mc_excerpt')) {
     /** HTML থেকে নিরাপদ সংক্ষিপ্ত বিবরণ */
     function mc_excerpt(?string $html, int $limit = 160): string
     {
-        $text = trim(preg_replace('/\s+/u', ' ', strip_tags((string) $html)));
+        // ছবির রেফারেন্স ({{media:12}}) টেক্সট হিসেবে কখনো দেখা যাবে না
+        $text = mc_plain($html);
         if (mb_strlen($text) <= $limit) {
             return $text;
         }

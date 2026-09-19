@@ -61,16 +61,30 @@ class PageController extends Controller
             'show_in_footer'   => ['nullable', 'boolean'],
             'sort_order'       => ['nullable', 'integer'],
             'featured_image'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'og_image'         => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'remove_featured_image' => ['nullable', 'boolean'],
+            'remove_og_image'  => ['nullable', 'boolean'],
             'meta_title'       => ['nullable', 'string', 'max:191'],
             'meta_description' => ['nullable', 'string', 'max:500'],
             'meta_keywords'    => ['nullable', 'string', 'max:400'],
-            'og_image'         => ['nullable', 'string', 'max:500'],
             'canonical_url'    => ['nullable', 'url', 'max:500'],
         ], [], ['title' => 'পেজের শিরোনাম']);
 
-        if ($request->hasFile('featured_image')) {
+        // ছবি কেবল সরাসরি আপলোড থেকেই আসে (URL/লিংক ইনপুট নেই) —
+        // হোস্টিং API (ImgBB) তে যায়, DB-তে শুধু রেফারেন্স বসে।
+        if ($request->boolean('remove_featured_image')) {
+            $data['featured_image'] = null;
+        } elseif ($request->hasFile('featured_image')) {
             $data['featured_image'] = $this->uploader->store($request->file('featured_image'), 'pages')->path;
         }
+
+        if ($request->boolean('remove_og_image')) {
+            $data['og_image'] = null;
+        } elseif ($request->hasFile('og_image')) {
+            $data['og_image'] = $this->uploader->store($request->file('og_image'), 'pages/og')->path;
+        }
+
+        unset($data['remove_featured_image'], $data['remove_og_image']);
         $data['is_visible']     = $request->boolean('is_visible', true);
         $data['show_in_footer'] = $request->boolean('show_in_footer');
 

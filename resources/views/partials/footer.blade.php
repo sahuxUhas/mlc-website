@@ -5,7 +5,7 @@
         <div>
             <div class="mb-3 flex items-center gap-2.5">
                 <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#C5E7C8] ring-1 ring-white/10">
-                    <img src="{{ site_setting('site_logo') ? asset(site_setting('site_logo')) : mc_placeholder_svg() }}" alt="{{ site_setting('site_name') }}" class="h-full w-full object-cover" loading="lazy">
+                    <img src="{{ site_setting('site_logo') ? mc_image(site_setting('site_logo')) : mc_placeholder_svg() }}" alt="{{ site_setting('site_name') }}" class="h-full w-full object-cover" loading="lazy">
                 </span>
                 <span class="flex flex-col">
                     <span class="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-400">{{ site_setting('site_prefix', 'দৈনিক') }}</span>

@@ -6,8 +6,15 @@
 @section('og_title', $post->og_title ?: $post->title)
 @section('og_description', $post->og_description ?: mc_excerpt($post->excerpt ?: $post->content, 240))
 @section('og_type', 'article')
-@section('og_image', $post->og_image ? mc_image($post->og_image) : ($post->featured_image ? mc_image($post->featured_image) : ''))
+@section('og_image', $post->og_image_url ?: (site_setting('seo_og_image') ? mc_image(site_setting('seo_og_image')) : (site_setting('site_logo') ? mc_image(site_setting('site_logo')) : '')))
 @section('canonical', $post->canonical_url ?: route('news.show', $post->slug))
+
+@php $preview = $previewMode ?? false; @endphp
+
+@if($preview)
+    {{-- অ্যাডমিন প্রাকদর্শন — সার্চ ইঞ্জিনে ইনডেক্স হবে না --}}
+    @section('robots', 'noindex, nofollow')
+@endif
 
 @push('head')
     @if(filter_var(site_setting('seo_schema_enabled', '1'), FILTER_VALIDATE_BOOLEAN))
@@ -26,6 +33,18 @@
 @endpush
 
 @section('content')
+@if($preview)
+    <div class="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[#E21D2B] bg-[#FFF7ED] px-3 py-2 text-xs sm:px-4">
+        <span class="flex items-center gap-1.5 font-bold text-[#B9121E]">
+            <i class="ph-fill ph-eye"></i> প্রাকদর্শন মোড — এই সংবাদটি এখনো প্রকাশিত হয়নি, কেবল আপনিই দেখছেন
+        </span>
+        <span class="flex items-center gap-3">
+            <span class="rounded-full bg-white px-2 py-0.5 font-bold text-slate-600">স্ট্যাটাস: {{ \App\Models\Post::STATUSES[$post->status] ?? $post->status }}</span>
+            <a href="{{ route('admin.news.edit', $post) }}" class="font-bold text-[#B9121E] underline">← সম্পাদনায় ফিরুন</a>
+        </span>
+    </div>
+@endif
+
 <div class="container mx-auto max-w-3xl px-3 py-6 sm:px-4 md:py-8" id="article-page">
     <nav class="mb-5 flex flex-wrap items-center gap-1.5 text-sm text-gray-500 dark:text-[#94A3B8]" aria-label="ব্রেডক্রাম্ব">
         <a href="{{ route('home') }}" class="hover:text-[#D50E18] dark:hover:text-[#22C55E] flex items-center gap-1"><i class="ph ph-house"></i> হোম</a>
@@ -39,9 +58,9 @@
         {{ $post->title }}
     </h1>
 
-    @if($post->featured_image)
+    @if($post->featured_image || $post->featured_media_id)
         <figure class="mb-6 overflow-hidden rounded-xl">
-            <img src="{{ mc_image($post->featured_image) }}" alt="{{ $post->title }}" class="w-full object-cover" loading="eager" decoding="async"
+            <img src="{{ $post->featured_image_url }}" alt="{{ $post->title }}" class="w-full object-cover" loading="eager" decoding="async"
                  onerror="this.onerror=null;this.src='{{ mc_placeholder_svg() }}'">
         </figure>
     @endif
@@ -55,7 +74,8 @@
     @endif
 
     <div class="article-body font-serif text-[1.02rem] leading-[2] text-gray-800 dark:text-gray-200">
-        {!! $post->content !!}
+        {{-- ছবির রেফারেন্স ({{media:ID}}) → signed proxy URL; raw hosting URL কখনো HTML-এ যায় না --}}
+        {!! mc_content($post->content) !!}
     </div>
 
     @if($post->images->isNotEmpty())
@@ -63,9 +83,13 @@
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 @foreach($post->images as $image)
                     <figure class="group overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-                        <img src="{{ mc_image($image->path) }}" alt="{{ $post->title }}" loading="lazy" decoding="async"
+                        {{-- প্রিভিউ = ছোট সংস্করণ, lightbox = বড় ছবি (দুটোই signed proxy URL) --}}
+                        <img src="{{ $image->url() }}" alt="{{ $image->label() ?: $post->title }}" loading="lazy" decoding="async"
                              class="aspect-video w-full cursor-zoom-in object-cover transition-transform duration-500 group-hover:scale-105"
-                             data-mc-lightbox="{{ mc_image($image->path) }}">
+                             data-mc-lightbox="{{ $image->fullUrl() }}">
+                        @if($image->caption)
+                            <figcaption class="px-2 py-1 text-[11px] text-gray-500 dark:text-[#94A3B8]">{{ $image->caption }}</figcaption>
+                        @endif
                     </figure>
                 @endforeach
             </div>
@@ -87,7 +111,11 @@
         </div>
     </div>
 
-    @if($post->allow_comments && filter_var(site_setting('comments_enabled', '1'), FILTER_VALIDATE_BOOLEAN))
+    @if($preview)
+        <p class="mt-8 rounded-xl border border-dashed border-gray-300 py-6 text-center text-sm text-gray-500 dark:border-gray-600">
+            মন্তব্য বিভাগ প্রকাশের পর পাঠকদের জন্য খুলে যাবে।
+        </p>
+    @elseif($post->allow_comments && filter_var(site_setting('comments_enabled', '1'), FILTER_VALIDATE_BOOLEAN))
         <section class="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-[#263246] dark:bg-[#182233]/50" id="comments">
             <h2 class="mb-4 font-serif text-lg font-bold text-gray-900 dark:text-[#F1F5F9]">মন্তব্য লিখুন</h2>
 
