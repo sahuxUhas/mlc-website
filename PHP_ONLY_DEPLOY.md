@@ -75,14 +75,18 @@ chmod -R 775 storage bootstrap/cache public/uploads
 
 ## ImgBB Setup (Only PHP)
 
-`.env` এ আগে থেকেই আছে:
+`.env` এ Key সেট করতে হবে (নিরাপত্তার জন্য এটি কখনো Git-এ থাকে না):
 ```env
-IMGBB_API_KEY=4bfac8cf6fa4714236c08292299d2862
+IMGBB_API_KEY=এখানে-আপনার-কী
 IMGBB_ENABLED=true
+IMAGE_PROVIDER=imgbb
+IMAGE_LOCAL_FALLBACK=true
+IMAGE_PROXY_ENABLED=true
 ```
 
 - Admin → Media Library থেকে আপলোড করলে ছবি `i.ibb.co` তে যাবে
-- Local fallback আছে - ImgBB fail হলে `public/uploads/` এ যাবে
+- Local fallback আছে - `IMGBB_API_KEY` না থাকলে `public/uploads/` এ যাবে
+- পুরোনো Key Git ইতিহাসে থাকায় **rotate করা জরুরি** — বিস্তারিত: `IMGBB_SETUP.md`
 
 ## Cloudflare Deploy Fix (যদি Cloudflare ব্যবহার করেন)
 
@@ -127,4 +131,4 @@ Missing entry-point
 
 - Facebook Page: https://www.facebook.com/profile.php?id=100068836585906
 - Health: /health.php
-- Docs: README.md, REAL_NEWS_UPDATE.md, IMGBB_SETUP.md
+- Docs: README.md, REAL_NEWS_UPDATE.md, IMGBB_SETUP.md, NEWS_EDITOR_GUIDE.md

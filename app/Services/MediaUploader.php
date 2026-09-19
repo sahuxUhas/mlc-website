@@ -3,22 +3,27 @@
 namespace App\Services;
 
 use App\Models\Media;
+use App\Services\Images\ImageManager;
+use App\Services\Images\ImageUploadException;
+use App\Services\Images\UploadedImage;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Illuminate\Support\MessageBag;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use App\Services\ImgbbService;
 
 /**
- * সিকিউর ফাইল আপলোড সার্ভিস — মিডিয়া লাইব্রেরি, নিউজ, গ্যালারি,
- * রিপোর্টার ছবি ও বিজ্ঞাপনের ছবি সবই এখান দিয়ে যায়।
+ * সিকিউর ফাইল আপলোড সার্ভিস — মিডিয়া লাইব্রেরি, নিউজ (featured/gallery/editor),
+ * অ্যালবাম, রিপোর্টার ছবি, বিজ্ঞাপন, ই-পেপার — সবই এই সার্ভিস দিয়ে যায়।
+ *
+ * Flow (ছবি):
+ *   Admin → Image Select → এই সার্ভিস → ImageManager → ImgBB API
+ *        → MySQL-এ শুধু URL/ID রেফারেন্স (BLOB নয়) → সাইটে signed proxy URL
  *
  * নিরাপত্তা:
- *  - এক্সটেনশন + আসল MIME টাইপ দুটোই যাচাই (double extension / fake mime রোধ)
- *  - ফাইলের ভেতরে PHP ট্যাগ থাকলে প্রত্যাখ্যান
- *  - দৈবচয়নমূলক ফাইলনাম (আসল নাম থেকে path traversal রোধ)
- *  - সাইজ সীমা (.env: MC_UPLOAD_MAX_KB)
+ *  - এক্সটেনশন + আসল MIME দুটোই যাচাই (double extension / fake mime রোধ)
+ *  - ফাইলের ভেতরে PHP/script ট্যাগ থাকলে প্রত্যাখ্যান
+ *  - দৈবচয়নমূলক ফাইলনাম (path traversal রোধ)
+ *  - সাইজ সীমা: config/images.php (MC_UPLOAD_MAX_KB)
+ *  - provider ব্যর্থ হলে স্পষ্ট বাংলা error; API Key কখনো message/log-এ যায় না
  */
 class MediaUploader
 {
@@ -35,93 +40,73 @@ class MediaUploader
     /** সংযুক্তি (ই-পেপার/রিপোর্ট) এর জন্য */
     public const DOC_MIMES = ['pdf' => 'application/pdf'];
 
-    private ImgbbService $imgbb;
+    /** সংবাদের ছবিতে শুধু নিরাপদ ফরম্যাট */
+    public const NEWS_MIMES = [
+        'jpg'  => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png'  => 'image/png',
+        'webp' => 'image/webp',
+    ];
+
+    private ImageManager $images;
 
     public function __construct(private string $disk = 'uploads')
     {
-        $this->imgbb = new ImgbbService();
+        $this->images = new ImageManager();
     }
 
+    public function images(): ImageManager
+    {
+        return $this->images;
+    }
+
+    /** অ্যাডমিন UI-এর জন্য নিরাপদ সারাংশ (কোনো API Key বা raw URL নয়) */
+    public function providerStatus(): array
+    {
+        return $this->images->status();
+    }
+
+    /** পিছনের কোডে সামঞ্জস্য রাখতে (আগের নাম) */
     public function isImgbbEnabled(): bool
     {
-        return $this->imgbb->isEnabled();
+        return $this->images->imgbb()->isConfigured();
     }
 
     /**
-     * ফাইল যাচাই করে নিরাপদে সংরক্ষণ করে ও Media রেকর্ড তৈরি করে।
-     * যদি ImgBB চালু থাকে এবং ছবি হয়, তাহলে ImgBB তে আপলোড হবে।
+     * ফাইল যাচাই করে নিরাপদে সংরক্ষণ করে Media রেকর্ড তৈরি করে।
+     * ছবি হলে (provider কনফিগার থাকলে) সরাসরি ImgBB API-তে আপলোড হয়।
      *
-     * @throws ValidationException ভ্যালিডেশন ব্যর্থ হলে (ব্যবহারকারী-বান্ধব বার্তা)
+     * @throws ValidationException ভ্যালিডেশন/আপলোড ব্যর্থ হলে (ব্যবহারকারী-বান্ধব বাংলা বার্তা)
      */
     public function store(UploadedFile $file, string $folder = 'general', array $allowed = self::IMAGE_MIMES): Media
     {
         $this->validate($file, $allowed);
 
         $extension = strtolower($file->getClientOriginalExtension());
-        $isImage = str_starts_with((string) $file->getMimeType(), 'image/');
+        $isImage = str_starts_with(strtolower((string) $file->getMimeType()), 'image/');
 
-        // ImgBB তে আপলোড (যদি চালু থাকে এবং ছবি হয়, PDF নয়)
-        if ($isImage && $this->imgbb->isEnabled() && $extension !== 'pdf') {
-            try {
-                $result = $this->imgbb->upload($file, $this->cleanOriginalName($file->getClientOriginalName()));
+        try {
+            $uploaded = $isImage
+                ? $this->images->upload($file, $folder, $this->cleanOriginalName($file->getClientOriginalName()))
+                : $this->images->local()->upload($file, $folder, $this->cleanOriginalName($file->getClientOriginalName()));
+        } catch (ImageUploadException $e) {
+            Log::warning('Image upload failed via provider', [
+                'provider' => $this->images->provider()->name(),
+                'folder'   => $folder,
+                'reason'   => $e->reason,
+            ]);
 
-                return Media::create([
-                    'file_name'   => $this->cleanOriginalName($file->getClientOriginalName()),
-                    'disk'        => 'imgbb',
-                    'path'        => $result['display_url'] ?: $result['url'], // full URL stored
-                    'mime_type'   => $file->getMimeType(),
-                    'extension'   => $extension,
-                    'size'        => $result['size'] ?? $file->getSize() ?: 0,
-                    'width'       => $result['width'],
-                    'height'      => $result['height'],
-                    'uploaded_by' => auth()->id(),
-                ]);
-            } catch (\Throwable $e) {
-                // ImgBB ব্যর্থ হলে লোকাল ফলব্যাক (লগ করে)
-                \Illuminate\Support\Facades\Log::warning('ImgBB failed, fallback to local', ['error' => $e->getMessage()]);
-                // যদি ValidationException হয় এবং সেটা API key বা ImgBB error হয়, তাহলে throw করি
-                if ($e instanceof ValidationException) {
-                    // যদি API key missing না হয়, ফলব্যাক করি; না হলে throw
-                    $msg = $e->getMessage();
-                    if (str_contains($msg, 'API key') || str_contains($msg, 'ImgBB API error')) {
-                        // API key সমস্যা হলে সরাসরি দেখাই
-                        throw $e;
-                    }
-                }
-                // otherwise fallback to local below
-            }
+            throw ValidationException::withMessages(['files' => $e->getMessage(), 'images' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            Log::error('Image upload crashed', ['error' => $e->getMessage(), 'folder' => $folder]);
+
+            throw ValidationException::withMessages(['files' => 'ছবি সংরক্ষণে অপ্রত্যাশিত সমস্যা হয়েছে — আবার চেষ্টা করুন।']);
         }
 
-        // লোকাল আপলোড (ফলব্যাক)
-        $name = Str::lower(Str::random(24)).'-'.now()->timestamp.'.'.$extension;
-
-        $path = trim($folder, '/').'/'.$name;
-
-        Storage::disk($this->disk)->putFileAs(dirname($path), $file, basename($path));
-
-        $width = null;
-        $height = null;
-        if ($isImage) {
-            $dims = @getimagesize($file->getRealPath());
-            if ($dims !== false) {
-                [$width, $height] = $dims;
-            }
-        }
-
-        return Media::create([
-            'file_name'   => $this->cleanOriginalName($file->getClientOriginalName()),
-            'disk'        => $this->disk,
-            'path'        => $path,
-            'mime_type'   => $file->getMimeType(),
-            'extension'   => $extension,
-            'size'        => $file->getSize() ?: 0,
-            'width'       => $width,
-            'height'      => $height,
-            'uploaded_by' => auth()->id(),
-        ]);
+        return $this->persist($uploaded, $file, $folder);
     }
 
-    /** একাধিক ফাইল একসাথে আপলোড */
+    /** একাধিক ফাইল একসাথে আপলোড — কোনো একটি ব্যর্থ হলে পুরো কাজ থেমে যায় (পুরোনো আচরণ) */
     public function storeMany(array $files, string $folder = 'general', array $allowed = self::IMAGE_MIMES): array
     {
         $saved = [];
@@ -135,16 +120,49 @@ class MediaUploader
         return $saved;
     }
 
+    /**
+     * একাধিক ফাইল — একটি ব্যর্থ হলেও বাকিগুলো সংরক্ষিত হয় এবং
+     * ত্রুটির তালিকা ফেরত আসে (গ্যালারি AJAX আপলোডের জন্য)।
+     *
+     * @return array{saved: array<int, Media>, errors: array<int, string>}
+     */
+    public function storeManyCollect(array $files, string $folder = 'general', array $allowed = self::IMAGE_MIMES): array
+    {
+        $saved = [];
+        $errors = [];
+
+        foreach ($files as $file) {
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            try {
+                $saved[] = $this->store($file, $folder, $allowed);
+            } catch (ValidationException $e) {
+                foreach ($e->errors() as $messages) {
+                    foreach ($messages as $message) {
+                        $errors[] = $message;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gallery upload failed', ['error' => $e->getMessage()]);
+                $errors[] = 'একটি ছবি আপলোড করা যায়নি — আবার চেষ্টা করুন।';
+            }
+        }
+
+        return ['saved' => $saved, 'errors' => array_values(array_unique($errors))];
+    }
+
     /** ভ্যালিডেশন — ব্যর্থ হলে ValidationException (বাংলা বার্তাসহ) */
     public function validate(UploadedFile $file, array $allowed): void
     {
         if (! $file->isValid()) {
-            throw $this->fail('ফাইল আপলোড ব্যর্থ হয়েছে।');
+            throw $this->fail('ফাইল আপলোড ব্যর্থ হয়েছে — আবার চেষ্টা করুন।');
         }
 
-        $maxKb = (int) env('MC_UPLOAD_MAX_KB', 4096);
+        $maxKb = (int) (config('images.max_kb') ?: 4096);
         if (($file->getSize() / 1024) > $maxKb) {
-            throw $this->fail('ফাইলের সাইজ সর্বোচ্চ '.bn_num($maxKb).' KB হতে পারবে।');
+            throw $this->fail('ছবির সাইজ সর্বোচ্চ '.bn_num($maxKb).' KB হতে পারবে। দয়া করে ছোট করে আবার চেষ্টা করুন।');
         }
 
         $extension = strtolower($file->getClientOriginalExtension());
@@ -165,13 +183,41 @@ class MediaUploader
             throw $this->fail('নিরাপত্তার কারণে এই ফাইল গ্রহণ করা হয়নি।');
         }
 
-        // ছবির ভেতরে PHP কোড লুকানো আছে কিনা
+        // ছবির ভেতরে PHP কোড/স্ক্রিপ্ট লুকানো আছে কিনা
         if (str_starts_with($realMime, 'image/')) {
-            $head = (string) file_get_contents($file->getRealPath(), false, null, 0, 2048);
+            $path = $file->getRealPath();
+
+            if ($path === false || @getimagesize($path) === false) {
+                throw $this->fail('ফাইলটি বৈধ ছবি নয় — শুধু jpg, png, webp গ্রহণ করা হয়।');
+            }
+
+            $head = (string) file_get_contents($path, false, null, 0, 2048);
             if (stripos($head, '<?php') !== false || stripos($head, '<script') !== false) {
                 throw $this->fail('ছবির ভেতরে স্ক্রিপ্ট পাওয়া গেছে — আপলোড প্রত্যাখ্যাত।');
             }
         }
+    }
+
+    /** Media রেকর্ড তৈরি (ImgBB/লোকাল — দুই ক্ষেত্রেই) */
+    private function persist(UploadedImage $uploaded, UploadedFile $file, string $folder): Media
+    {
+        return Media::create([
+            'file_name'           => $this->cleanOriginalName($file->getClientOriginalName()),
+            'disk'                => $uploaded->disk,
+            'provider'            => $uploaded->provider,
+            'provider_id'         => $uploaded->providerId,
+            'path'                => $uploaded->path(),
+            'provider_url'        => $uploaded->remote ? $uploaded->url : null,
+            'provider_delete_url' => $uploaded->deleteUrl,
+            'thumb_url'           => $uploaded->remote ? $uploaded->thumbUrl : null,
+            'folder'              => trim($folder, '/') ?: 'general',
+            'mime_type'           => $uploaded->mimeType ?: $file->getMimeType(),
+            'extension'           => $uploaded->extension ?: strtolower($file->getClientOriginalExtension()),
+            'size'                => $uploaded->size ?: (int) ($file->getSize() ?: 0),
+            'width'               => $uploaded->width,
+            'height'              => $uploaded->height,
+            'uploaded_by'         => auth()->id(),
+        ]);
     }
 
     /** ডাটাবেসে সংরক্ষণের জন্য আসল নাম পরিষ্কার করা */
@@ -182,19 +228,17 @@ class MediaUploader
         return mb_substr(trim((string) $name), 0, 180) ?: 'file';
     }
 
-    /** Media রেকর্ড ও ডিস্কের ফাইল — দুটোই মুছে ফেলা (ImgBB হলে শুধু DB থেকে) */
+    /**
+     * Media রেকর্ড + হোস্টিং/ডিস্কের ফাইল — দুটোই মুছে ফেলা।
+     * (ImgBB হলে হোস্টিং delete URL best-effort কল করা হয়, ব্যর্থ হলেও DB পরিষ্কার থাকে)
+     */
     public function delete(Media $media): void
     {
-        if ($media->disk === 'imgbb') {
-            // ImgBB তে delete API আলাদা, delete_url দিয়ে করতে হয়, আপাতত শুধু DB থেকে মুছি
-            // TODO: ImgBB delete_url কল করা যেতে পারে
-        } else {
-            Storage::disk($media->disk ?: $this->disk)->delete($media->path);
-        }
+        $media->deleteFile();
         $media->delete();
     }
 
-    /** পাবলিক URL তৈরি */
+    /** পাবলিক URL তৈরি (remote হলে signed proxy URL) */
     public function url(?string $path): ?string
     {
         return $path ? mc_image($path) : null;
@@ -206,6 +250,6 @@ class MediaUploader
      */
     private function fail(string $message): ValidationException
     {
-        return ValidationException::withMessages(['files' => $message]);
+        return ValidationException::withMessages(['files' => $message, 'images' => $message]);
     }
 }

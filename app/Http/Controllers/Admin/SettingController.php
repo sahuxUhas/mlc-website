@@ -49,10 +49,12 @@ class SettingController extends Controller
             ['key' => 'comments_enabled',    'label' => 'মন্তব্য চালু',       'type' => 'bool'],
             ['key' => 'site_maintenance',    'label' => 'মেইনটেন্যান্স মোড',   'type' => 'bool'],
         ],
+        // নিরাপত্তা: API Key কখনো ডাটাবেস/UI-তে রাখা হয় না — শুধু সার্ভারের .env এ।
         'media' => [
-            ['key' => 'imgbb_enabled', 'label' => 'ImgBB আপলোড চালু (ছবি ImgBB তে যাবে)', 'type' => 'bool'],
-            ['key' => 'imgbb_api_key', 'label' => 'ImgBB API Key', 'type' => 'text', 'hint' => 'আপনার API Key: 4bfac8cf6fa4714236c08292299d2862 - https://api.imgbb.com/ থেকে নেওয়া'],
-            ['key' => 'imgbb_expiration', 'label' => 'ImgBB Expiration (সেকেন্ড, 0 = never)', 'type' => 'text', 'hint' => '0 রাখলে ছবি কখনো ডিলিট হবে না'],
+            ['key' => 'imgbb_enabled', 'label' => 'ছবি হোস্টিং (ImgBB) আপলোড চালু', 'type' => 'bool',
+             'hint' => 'API Key সার্ভারের .env ফাইলে (IMGBB_API_KEY) সেট করতে হয় — Admin Panel থেকে Key দেওয়া যায় না'],
+            ['key' => 'imgbb_expiration', 'label' => 'ImgBB Expiration (সেকেন্ড, 0 = কখনো নয়)', 'type' => 'text',
+             'hint' => '0 রাখলে ছবি কখনো ডিলিট হবে না'],
         ],
         'integrations' => [
             ['key' => 'analytics_code', 'label' => 'Google Analytics কোড', 'type' => 'textarea'],
@@ -106,6 +108,11 @@ class SettingController extends Controller
                 $value = $type === 'bool' ? ($request->boolean($key) ? '1' : '0') : ($validated[$key] ?? '');
                 Setting::put($key, $value, $type, $group);
             }
+        }
+
+        // পুরোনো সংস্করণে সেভ হওয়া API Key (যদি থাকে) ডাটাবেস থেকে সরিয়ে দেওয়া হয়
+        if ($request->user()->isSuperAdmin()) {
+            Setting::where('key', 'imgbb_api_key')->delete();
         }
 
         Setting::flushCache();

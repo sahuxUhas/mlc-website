@@ -13,7 +13,7 @@ class NewsController extends Controller
         $post = Post::published()
             ->with([
                 'category', 'subcategory:id,name,slug', 'reporter',
-                'author:id,name,avatar', 'images', 'tags',
+                'author:id,name,avatar', 'images.media', 'tags', 'featuredMedia', 'ogMedia',
                 'comments' => fn ($q) => $q->approved()->topLevel()->with('replies')->newest()->limit(100),
             ])
             ->where('slug', $slug)
@@ -30,14 +30,14 @@ class NewsController extends Controller
             'mainEntityOfPage' => ['@type' => 'WebPage', '@id' => route('news.show', $post->slug)],
             'headline'         => mb_substr($post->title, 0, 110),
             'description'      => mc_excerpt($post->excerpt ?: $post->content, 300),
-            'image'            => $post->featured_image ? [asset($post->featured_image)] : [],
+            'image'            => ($post->featured_image || $post->featured_media_id) ? [$post->featured_image_url] : [],
             'datePublished'    => optional($post->published_at)->toIso8601String(),
             'dateModified'     => optional($post->updated_at)->toIso8601String(),
             'author'           => ['@type' => 'Person', 'name' => $post->reporter?->name ?? $post->author?->name ?? site_setting('site_name')],
             'publisher'        => [
                 '@type' => 'Organization',
                 'name'  => site_setting('site_name', config('app.name')),
-                'logo'  => ['@type' => 'ImageObject', 'url' => site_setting('site_logo')],
+                'logo'  => ['@type' => 'ImageObject', 'url' => mc_image(site_setting('site_logo'))],
             ],
             'articleSection'   => $post->category?->name,
             'keywords'         => $post->tags->pluck('name')->implode(', '),

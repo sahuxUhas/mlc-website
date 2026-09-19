@@ -24,11 +24,11 @@ class Post extends Model
 
     protected $fillable = [
         'title', 'slug', 'category_id', 'subcategory_id', 'reporter_id', 'author_id',
-        'featured_image', 'image_caption', 'image_credit', 'excerpt', 'content',
+        'featured_image', 'featured_media_id', 'image_caption', 'image_credit', 'excerpt', 'content',
         'video_url', 'location', 'status', 'is_featured', 'is_breaking', 'allow_comments',
         'published_at', 'scheduled_at', 'views', 'comments_count', 'sort_order',
         'meta_title', 'meta_description', 'meta_keywords', 'og_title', 'og_description',
-        'og_image', 'canonical_url',
+        'og_image', 'og_media_id', 'canonical_url',
     ];
 
     protected function casts(): array
@@ -56,6 +56,8 @@ class Post extends Model
     public function reporter()      { return $this->belongsTo(Reporter::class); }
     public function author()        { return $this->belongsTo(User::class, 'author_id'); }
     public function images()        { return $this->hasMany(PostImage::class)->orderBy('sort_order'); }
+    public function featuredMedia() { return $this->belongsTo(Media::class, 'featured_media_id'); }
+    public function ogMedia()       { return $this->belongsTo(Media::class, 'og_media_id'); }
     public function comments()      { return $this->morphMany(Comment::class, 'commentable'); }
     public function breakingEntry() { return $this->hasOne(BreakingNews::class); }
 
@@ -138,6 +140,59 @@ class Post extends Model
             && $this->published_at->lte(now());
     }
 
+    /**
+     * Featured Image URL — remote হলে signed proxy URL (raw hosting URL নয়)।
+     * path আকারে থাকলে সেটিই ব্যবহৃত হয় ⇒ তালিকা পেজে অতিরিক্ত কুয়েরি হয় না।
+     */
+    public function getFeaturedImageUrlAttribute(): string
+    {
+        if (trim((string) $this->featured_image) !== '') {
+            return mc_image($this->featured_image);
+        }
+
+        if ($this->featured_media_id) {
+            return mc_image($this->featuredMedia?->path);
+        }
+
+        return mc_image(null);
+    }
+
+    /** অ্যাডমিন প্রিভিউ থাম্বনেইল (হোস্টিংয়ের ছোট সংস্করণ থাকলে সেটি) */
+    public function getFeaturedThumbAttribute(): string
+    {
+        if ($this->featured_media_id) {
+            $media = $this->relationLoaded('featuredMedia') ? $this->featuredMedia : null;
+
+            if ($media) {
+                return mc_image($media->thumb_url ?: $media->path);
+            }
+        }
+
+        return mc_image($this->featured_image);
+    }
+
+    /** OG Image URL (সোশ্যাল শেয়ার) */
+    public function getOgImageUrlAttribute(): string
+    {
+        if (trim((string) $this->og_image) !== '') {
+            return mc_image($this->og_image);
+        }
+
+        if ($this->og_media_id) {
+            return mc_image($this->ogMedia?->path);
+        }
+
+        return trim((string) $this->featured_image) !== '' || $this->featured_media_id
+            ? $this->featured_image_url
+            : '';
+    }
+
+    /** সম্পূর্ণ কনটেন্ট render (ছবির রেফারেন্স → signed URL) */
+    public function renderedContent(): string
+    {
+        return mc_content($this->content);
+    }
+
     public function getReadingTimeAttribute(): int
     {
         $words = str_word_count(strip_tags((string) $this->content));
@@ -165,17 +220,48 @@ class Post extends Model
             }
         });
 
-        // ক্যাটাগরির প্রকাশিত সংবাদ-সংখ্যা সঠিকভাবে পুনর্গণনা
+        // ক্যাটাগরির প্রকাশিত সংবাদ-সংখ্যা সঠিকভাবে পুনর্গণনা + পাবলিক ক্যাশ রিফ্রেশ
+        // (অ্যাডমিন থেকে সংবাদ বদলালে সাথে সাথে Public Website-এ দেখা যাবে)
         static::saved(function (Post $post) {
             static::refreshCategoryCount($post->category_id);
 
             if ($post->isDirty('category_id') && $post->getOriginal('category_id')) {
                 static::refreshCategoryCount($post->getOriginal('category_id'));
             }
+
+            \App\Support\PublicCache::flushForContent();
         });
 
         static::deleted(function (Post $post) {
             static::refreshCategoryCount($post->category_id);
+            \App\Support\PublicCache::flushForContent();
+        });
+
+        static::restored(function (Post $post) {
+            static::refreshCategoryCount($post->category_id);
+            \App\Support\PublicCache::flushForContent();
+        });
+
+        // স্থায়ীভাবে মুছলে গ্যালারির মিডিয়া রেফারেন্সও পরিষ্কার করা হয়
+        // (forceDeleting — DB cascade delete হওয়ার আগেই ছবির তথ্য নেওয়া হয়)
+        static::forceDeleting(function (Post $post) {
+            \App\Support\PublicCache::flushForContent();
+
+            $post->images()->get()->each(function (PostImage $image) {
+                try {
+                    $media = $image->media;
+
+                    // নিজের রেফারেন্স বাদ দিয়ে দেখা হয় — অন্য কোথাও ব্যবহৃত না হলে মিডিয়াও মোছে
+                    if ($media && ! $media->isReferenced($post->id)) {
+                        $media->deleteFile();
+                        $media->forceDelete();
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::info('Post image cleanup skipped', [
+                        'post' => $post->id, 'error' => $e->getMessage(),
+                    ]);
+                }
+            });
         });
     }
 

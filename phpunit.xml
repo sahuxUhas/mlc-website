@@ -26,6 +26,11 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
+        <!-- টেস্টে বাইরের ImgBB API কল হবে না — MediaUploader লোকাল ডিস্কে লিখবে -->
+        <env name="IMGBB_ENABLED" value="false"/>
+        <env name="IMGBB_API_KEY" value=""/>
+        <env name="IMAGE_PROVIDER" value="imgbb"/>
+        <env name="IMAGE_PROXY_ENABLED" value="true"/>
         <!-- টেস্ট SQLite ইন-মেমরিতে চলে; প্রোডাকশনে MySQL -->
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>

@@ -32,7 +32,7 @@
                             <div class="flex gap-1"><button type="button" data-move="up" title="উপরে" class="rounded bg-white/15 px-1.5 py-0.5 text-white hover:bg-white/30"><i class="ph-bold ph-arrow-up text-[11px]"></i></button>
                                 <button type="button" data-move="down" title="নিচে" class="rounded bg-white/15 px-1.5 py-0.5 text-white hover:bg-white/30"><i class="ph-bold ph-arrow-down text-[11px]"></i></button></div>
                             <div class="flex gap-1">
-                                <form action="{{ route('admin.albums.update',$album) }}" method="POST" class="inline">@csrf @method('PUT')<input type="hidden" name="title" value="{{ $album->title }}"><input type="hidden" name="cover_image" value="{{ $ph->path }}">
+                                <form action="{{ route('admin.albums.update',$album) }}" method="POST" class="inline">@csrf @method('PUT')<input type="hidden" name="title" value="{{ $album->title }}"><input type="hidden" name="cover_photo_id" value="{{ $ph->id }}">
                                     <button type="submit" title="কভার করুন" class="rounded bg-white/15 px-1.5 py-0.5 text-white hover:bg-[#E21D2B]"><i class="ph-bold ph-star text-[11px]"></i></button></form>
                                 <form action="{{ route('admin.albums.photos.destroy',[$album,$ph]) }}" method="POST" class="inline" data-confirm="ছবিটি অ্যালবাম থেকে সরাবেন?">@csrf @method('DELETE')
                                     <button type="submit" title="মুছুন" class="rounded bg-white/15 px-1.5 py-0.5 text-white hover:bg-red-600"><i class="ph-bold ph-trash text-[11px]"></i></button></form></div>

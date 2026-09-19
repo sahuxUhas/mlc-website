@@ -19,7 +19,7 @@
     <meta property="og:description" content="@yield('og_description', $__env->yieldContent('meta_description'))">
     <meta property="og:type" content="@yield('og_type', 'website')">
     <meta property="og:url" content="@yield('canonical', url()->current())">
-    <meta property="og:image" content="@yield('og_image', site_setting('seo_og_image') ? asset(site_setting('seo_og_image')) : (site_setting('site_logo') ? asset(site_setting('site_logo')) : ''))">
+    <meta property="og:image" content="@yield('og_image', site_setting('seo_og_image') ? mc_image(site_setting('seo_og_image')) : (site_setting('site_logo') ? mc_image(site_setting('site_logo')) : ''))">
     <meta property="og:locale" content="bn_BD">
     <meta name="twitter:card" content="summary_large_image">
 
@@ -30,7 +30,7 @@
         <meta name="facebook-domain-verification" content="{{ site_setting('seo_verification_fb') }}">
     @endif
 
-    <link rel="icon" type="image/png" href="{{ site_setting('site_favicon') ? asset(site_setting('site_favicon')) : (site_setting('site_logo') ? asset(site_setting('site_logo')) : mc_placeholder_svg()) }}">
+    <link rel="icon" type="image/png" href="{{ site_setting('site_favicon') ? mc_image(site_setting('site_favicon')) : (site_setting('site_logo') ? mc_image(site_setting('site_logo')) : mc_placeholder_svg()) }}">
     <link rel="alternate" type="application/rss+xml" title="{{ site_setting('site_name') }} RSS" href="{{ route('feed') }}">
 
     {{-- Fonts (ডেমোর সাথে হুবহু এক) --}}
