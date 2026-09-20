@@ -73,11 +73,20 @@ $tabs = [['all','সব','bg-slate-100 text-slate-700'],['published','প্র�
                 @forelse($posts as $post)
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                         <td class="px-3 py-2.5"><input type="checkbox" name="ids[]" value="{{ $post->id }}" class="h-4 w-4 rounded border-slate-300 text-[#E21D2B] bulk-check"></td>
-                        <td class="max-w-[280px] px-3 py-2.5">
-                            <a href="{{ route('admin.news.edit',$post) }}" class="line-clamp-2 font-bold text-slate-800 hover:text-[#E21D2B] dark:text-slate-200">{{ $post->title }}</a>
-                            <div class="mt-1 flex gap-1">
-                                @if($post->is_featured)<span class="rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">ফিচার্ড</span>@endif
-                                @if($post->is_breaking)<span class="rounded bg-red-100 px-1 text-[9px] font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300">ব্রেকিং</span>@endif
+                        <td class="max-w-[300px] px-3 py-2.5">
+                            <div class="flex items-start gap-2">
+                                {{-- থাম্বনেইল (raw URL নয় — signed proxy URL) --}}
+                                <img src="{{ $post->featured_thumb }}" alt="{{ $post->title }}" loading="lazy"
+                                     class="hidden h-10 w-14 shrink-0 rounded-md border border-slate-200 object-cover dark:border-slate-700 sm:block"
+                                     onerror="this.onerror=null;this.src='{{ mc_placeholder_svg() }}'">
+                                <div class="min-w-0">
+                                    <a href="{{ route('admin.news.edit',$post) }}" class="line-clamp-2 font-bold text-slate-800 hover:text-[#E21D2B] dark:text-slate-200">{{ $post->title }}</a>
+                                    <div class="mt-1 flex flex-wrap gap-1">
+                                        @if($post->is_featured)<span class="rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">হোমপেজ</span>@endif
+                                        @if($post->is_breaking)<span class="rounded bg-red-100 px-1 text-[9px] font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300">ব্রেকিং</span>@endif
+                                        @if($post->images_count ?? false)<span class="rounded bg-slate-100 px-1 text-[9px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ bn_num($post->images_count) }} ছবি</span>@endif
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td class="px-3 py-2.5 text-slate-600 dark:text-slate-400">{{ $post->category?->name ?? '—' }}</td>
@@ -96,7 +105,8 @@ $tabs = [['all','সব','bg-slate-100 text-slate-700'],['published','প্র�
                                     @elseif($post->status==='published' && auth()->user()->can_manage('news.publish'))
                                         <button type="button" onclick="document.getElementById('unpub-{{ $post->id }}').submit()" class="rounded border border-amber-300 p-1.5 text-amber-600 hover:bg-amber-50 dark:border-amber-800" title="আনপাবলিশ"><i class="ph ph-eye-slash"></i></button>
                                     @endif
-                                    <a href="{{ route('news.show',$post->slug) }}" target="_blank" class="rounded border border-slate-300 p-1.5 text-slate-600 hover:border-blue-500 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300" title="দেখুন"><i class="ph ph-arrow-square-out"></i></a>
+                                    <a href="{{ route('admin.news.preview',$post) }}" target="_blank" rel="noopener" class="rounded border border-slate-300 p-1.5 text-slate-600 hover:border-amber-500 hover:text-amber-600 dark:border-slate-700 dark:text-slate-300" title="প্রাকদর্শন"><i class="ph ph-eye"></i></a>
+                                    <a href="{{ route('news.show',$post->slug) }}" target="_blank" rel="noopener" class="rounded border border-slate-300 p-1.5 text-slate-600 hover:border-blue-500 hover:text-blue-600 dark:border-slate-700 dark:text-slate-300" title="লাইভ পেজ"><i class="ph ph-arrow-square-out"></i></a>
                                     @if(auth()->user()->can_manage('news.delete'))
                                         <button type="button" onclick="if(confirm('ট্র্যাশে পাঠাবেন?'))document.getElementById('del-{{ $post->id }}').submit()" class="rounded border border-red-300 p-1.5 text-red-600 hover:bg-red-50 dark:border-red-800" title="ট্র্যাশ"><i class="ph ph-trash-simple"></i></button>
                                     @endif

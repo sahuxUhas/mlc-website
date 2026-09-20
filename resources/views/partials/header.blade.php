@@ -5,7 +5,7 @@
     $prefix      = site_setting('site_prefix', 'দৈনিক');
     $tagline     = site_setting('site_tagline', 'পাহাড়ের কথা বলে');
     $domain      = site_setting('site_domain', 'mahalcharinews.com');
-    $logoUrl     = site_setting('site_logo') ? asset(site_setting('site_logo')) : mc_placeholder_svg();
+    $logoUrl     = site_setting('site_logo') ? mc_image(site_setting('site_logo')) : mc_placeholder_svg();
 @endphp
 
 <header id="site-header" class="sticky top-0 z-[80] border-b border-gray-200 bg-white/95 backdrop-blur transition-colors duration-200 dark:border-[#263246] dark:bg-[#0D1422]/95">

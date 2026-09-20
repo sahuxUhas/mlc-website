@@ -1,106 +1,105 @@
-# ImgBB Image Upload System
+# ছবি হোস্টিং (ImgBB) সেটআপ — নিরাপদ ইমেজ সিস্টেম
 
-**API Key:** `4bfac8cf6fa4714236c08292299d2862` (User provided)
+> ⚠️ **জরুরি:** পুরোনো সংস্করণে এই ডকুমেন্টে এবং `config/services.php` / `.env.example` /
+> `SettingSeeder` এ API Key টি লেখা ছিল এবং Git-এ commit হয়ে গেছে। সেই Key **আর নিরাপদ নয়** —
+> https://api.imgbb.com/ থেকে একটি **নতুন Key** তৈরি করে `.env` এ বসান এবং পুরোনোটিকে
+> ImgBB ড্যাশবোর্ড/অ্যাকাউন্ট থেকে বাতিল (revoke) করুন।
 
-## কী করা হয়েছে
+## এক নজরে — ছবি কোথায় যায়
 
-### 1. `.env` এ যোগ
+```
+Admin → ছবি নির্বাচন → Laravel Backend (MediaUploader → ImageManager)
+      → ImgBB API (API Key শুধু .env থেকে)
+      → MySQL-এ শুধু রেফারেন্স (hosting URL / provider id)
+      → ওয়েবসাইটে signed proxy URL:  /img/{token}?s=signature
+```
+
+* API Key **কখনো** ফ্রন্টএন্ড, JS, admin UI বা API response-এ যায় না।
+* ছবি MySQL-এ **BLOB হিসেবে সংরক্ষিত হয় না** — শুধু URL/ID রেফারেন্স।
+* ImgBB-এর raw URL (`https://i.ibb.co/...`) কোথাও টেক্সট বা `src` হিসেবে দেখানো হয় না;
+  `mc_image()` সব remote ছবিকে নিজের ডোমেইনের signed proxy URL-এ বদলে দেয়।
+
+## ধাপ ১ — `.env` (শুধু সার্ভারে, কখনো Git-এ নয়)
+
 ```env
-IMGBB_API_KEY=4bfac8cf6fa4714236c08292299d2862
+IMGBB_API_KEY=এখানে-নতুন-কী
 IMGBB_ENABLED=true
+IMGBB_TIMEOUT=30
+
+# image system (ভবিষ্যতে হোস্টিং বদলাতে এখানেই)
+IMAGE_PROVIDER=imgbb            # imgbb | local
+IMAGE_LOCAL_FALLBACK=true       # provider নিষ্ক্রিয়/কনফিগার না থাকলে public/uploads
+MC_UPLOAD_MAX_KB=4096           # প্রতিটি ছবির সর্বোচ্চ সাইজ (KB)
+MC_UPLOAD_MAX_FILES=20          # একসাথে সর্বোচ্চ কতটি
+
+# ছবি proxy (raw hosting URL লুকানোর জন্য)
+IMAGE_PROXY_ENABLED=true
+IMAGE_PROXY_TTL=10080           # ৭ দিন
+IMAGE_PROXY_HOSTS=i.ibb.co,ibb.co,imgbb.com,i.ibb.co.com
+IMAGE_PROXY_ALL=false
 ```
 
-### 2. `config/services.php`
-```php
-'imgbb' => [
-    'key' => env('IMGBB_API_KEY', '4bfac8cf6fa4714236c08292299d2862'),
-    'enabled' => env('IMGBB_ENABLED', true),
-],
-```
+`.env.example`-এ সবসময় খালি রাখুন: `IMGBB_API_KEY=` (কোনো আসল Key কখনো commit নয়)।
 
-### 3. নতুন Service: `app/Services/ImgbbService.php`
-- `isEnabled()` - API key আছে কিনা চেক
-- `upload(UploadedFile $file)` - ImgBB API তে base64 হিসেবে আপলোড
-  - Endpoint: `https://api.imgbb.com/1/upload?key=API_KEY`
-  - Response থেকে `display_url`, `thumb`, `width`, `height`, `size` নেয়
-- `uploadMany()` - multiple upload
+## ধাপ ২ — Deploy কমান্ড (cPanel)
 
-### 4. `MediaUploader` আপডেট
-- Constructor এ `ImgbbService` init
-- `store()` মেথডে:
-  - যদি ছবি হয় + ImgBB enabled + extension pdf না হয় → ImgBB তে আপলোড
-  - Success হলে `Media` record এ `disk='imgbb'` এবং `path='https://i.ibb.co/...'` (full URL) save
-  - Fail হলে local fallback (public/uploads)
-- `delete()` - ImgBB হলে শুধু DB থেকে delete (ImgBB delete API delete_url দিয়ে করতে হয়, TODO)
-
-### 5. `Media` Model
-- `getUrlAttribute()` - disk=imgbb হলে path ই URL return করে
-- `getIsImgbbAttribute()` - helper
-
-### 6. `MediaController`
-- Index এ ImgBB status pass করে
-- Stats এ imgbb count যোগ
-
-### 7. `admin/media/index.blade.php`
-- উপরে ImgBB সক্রিয়/বন্ধ status banner
-- প্রতিটি card এ ImgBB badge
-- Stats grid 3 থেকে 4 কলাম (ImgBB count যোগ)
-
-### 8. `SettingController` + `settings/edit.blade.php`
-- নতুন group `media`:
-  - `imgbb_enabled` (bool)
-  - `imgbb_api_key` (text) - hint এ API key দেখানো
-  - `imgbb_expiration` (0 = never)
-
-### 9. `SettingSeeder`
-- `imgbb_api_key = 4bfac8cf6fa4714236c08292299d2862`
-- `imgbb_enabled = 1`
-
-### 10. `composer.json`
-- `guzzlehttp/guzzle ^7.8` যোগ (Laravel Http client এর জন্য)
-
-## কীভাবে কাজ করে
-
-1. **Admin → মিডিয়া লাইব্রেরি** থেকে ছবি আপলোড করলে:
-   - Validation (MIME, size, PHP tag check)
-   - ImgBB enabled হলে → base64 encode → `POST https://api.imgbb.com/1/upload` → response URL → DB তে save
-   - ImgBB fail হলে → local `public/uploads/` এ save (fallback)
-
-2. **News → নতুন সংবাদ** এ Featured Image / Gallery আপলোড করলেও একই flow (MediaUploader ব্যবহার করে)
-
-3. **Frontend** এ `mc_image($path)` helper:
-   - যদি path `https://` দিয়ে শুরু হয় → যেমন আছে তেমন return (ImgBB URL)
-   - না হলে `asset('uploads/...')`
-
-## সুবিধা
-- cPanel এ storage limit কম, ImgBB তে unlimited (free tier)
-- CDN (i.ibb.co) - দ্রুত লোড
-- Direct link - কোথাও embed করা যায়
-- Fallback আছে - ImgBB down হলেও local কাজ করবে
-
-## cPanel Deploy
 ```bash
-composer install --no-dev
-# .env এ IMGBB_API_KEY সেট আছে কিনা চেক
-php artisan migrate --seed
-php artisan storage:link
-php artisan config:cache
+composer install --no-dev --optimize-autoloader
+php artisan key:generate          # APP_KEY খালি থাকলে (proxy signature এর জন্য দরকার)
+php artisan migrate --seed        # নতুন media/provider কলাম যোগ হবে
+php artisan optimize:clear        # config/route/view cache পরিষ্কার
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+chmod -R 775 storage bootstrap/cache public/uploads
 ```
 
-## Test
-```bash
-# Admin login → Media → ছবি আপলোড → উপরে ImgBB সক্রিয় badge দেখাবে
-# Upload করার পর card এ ImgBB badge + URL copy করলে https://i.ibb.co/... আসবে
-# News create করে Featured Image ImgBB থেকে আসছে কিনা চেক
-```
+## ধাপ ৩ — পরীক্ষা
 
-## API Key Security
-- `.env` এ রাখা হয়েছে, gitignore এ আছে (`.env` ignore)
-- `SettingSeeder` এও রাখা হয়েছে, কিন্তু DB থেকে পরিবর্তন করা যায়
-- Public repo তে API key expose না করতে চাইলে `.env.example` এ dummy key রাখুন
+1. `.env` সেভ করার পর `php artisan optimize:clear` চালান।
+2. **Admin → মিডিয়া লাইব্রেরি** — উপরে provider ব্যানার দেখাবে (ImgBB ক্লাউড হোস্টিং / সার্ভার স্টোরেজ)।
+3. **Admin → নতুন সংবাদ** — ফিচার্ড ইমেজ বা গ্যালারিতে ছবি দিয়ে সংরক্ষণ করুন।
+4. ছবির `src` চেক করুন: `/img/…?s=…` হবে — `i.ibb.co` দেখা যাবে না।
+5. ব্রাউজারে ছবি লোড না হলে `public/uploads/….htaccess`/৭৭৫ permission এবং
+   `IMAGE_PROXY_ENABLED=true` কিনা দেখুন।
 
-## Future Improvements
-- ImgBB delete API implement (delete_url ব্যবহার)
-- Expiration support (temporary images)
-- Bulk delete from ImgBB
-- Image resize/compression before upload
+## কীভাবে কাজ করে (কোড ম্যাপ)
+
+| ফাইল | কাজ |
+|---|---|
+| `config/images.php` | provider, সীমা, সাইজ, proxy হোস্ট allowlist |
+| `app/Services/MediaUploader.php` | ভ্যালিডেশন (extension+MIME, ডাবল এক্সটেনশন, ছবির ভেতরে স্ক্রিপ্ট স্ক্যান, সাইজ) → `Media` রেকর্ড |
+| `app/Services/Images/ImageManager.php` | কোন provider-এ যাবে (imgbb/local) + fallback নীতি |
+| `app/Services/Images/ImgbbProvider.php` | base64 upload, delete_url দিয়ে best-effort ডিলিট, key কখনো return করে না |
+| `app/Services/Images/LocalProvider.php` | `public/uploads` (ডকুমেন্ট/PDF ও fallback) |
+| `app/Support/ImageUrl.php` | signed token + HMAC signature, host allowlist (SSRF নিরাপদ) |
+| `app/Http/Controllers/ImageProxyController.php` | `/img/{token}?s=…` → হোস্টিং থেকে ছবি এনে ক্যাশ করে সার্ভ করে |
+| `app/Support/ContentRenderer.php` | কনটেন্টের `{{media:ID}}` → signed `<figure><img>` |
+| `app/Support/HtmlSanitizer.php` | সংরক্ষণের আগে XSS পরিষ্কার |
+| `app/Http/Controllers/Admin/NewsController.php` | Featured/Gallery/Editor ছবি আপলোড ও DB রেফারেন্স |
+
+## হোস্টিং ভবিষ্যতে বদলাতে চাইলে
+
+1. `.env` এ `IMAGE_PROVIDER=local` (বা নতুন driver) দিন — পুরোনো ImgBB ছবি proxy দিয়ে আগের মতোই চলবে।
+2. নতুন হোস্টিং যোগ করতে `app/Services/Images/` এ নতুন ক্লাস তৈরি করে `ImageManager::providerFor()`
+   তে যুক্ত করুন — বাকি কোড (News, Media Library, অন্যান্য ভিউ) অপরিবর্তিত থাকবে।
+
+## Error Handling
+
+| পরিস্থিতি | আচরণ |
+|---|---|
+| ভুল ফরম্যাট / fake MIME / ডাবল এক্সটেনশন | আপলোড বাতিল, বাংলা error message (failsafe, 500 নয়) |
+| সাইজ সীমার বেশি | আপলোড বাতিল + সঠিক বার্তা |
+| Provider কনফিগার নেই (`IMGBB_API_KEY` খালি) | `IMAGE_LOCAL_FALLBACK=true` হলে `public/uploads`, নইলে স্পষ্ট বার্তা |
+| ImgBB API ব্যর্থ (কী সঠিক কিন্তু সার্ভিস down) | কোনো নীরব fallback নয় — অ্যাডমিনকে বাংলা error; ছবি হারায় না |
+| Proxy fetch ব্যর্থ | placeholder ছবি দেখায়, ধ্বংসাত্মক ক্যাশ হয় না (পরের রিকোয়েস্টে আবার চেষ্টা) |
+| ছবি ডিলিট | DB রেফারেন্স দেখে ডিলিট; হোস্টিং ডিলিট best-effort (`delete_url`) |
+
+## সীমাবদ্ধতা / পরবর্তী কাজ
+
+- Expiration support (ImgBB temporary image) এখনো ব্যবহার করা হয়নি (`IMGBB_EXPIRATION` ভবিষ্যতের জন্য)।
+- খুব বড় ছবি আপলোডের আগে resize/compress করলে ব্যান্ডউইথ বাঁচবে।
+- CDN ব্যবহার করলে `public/uploads` এর জন্য আলাদা নীতি দরকার হতে পারে।
+
+## আরও দেখুন
+
+- `NEWS_EDITOR_GUIDE.md` — সংবাদ তৈরি/সম্পাদনা পেজের পূর্ণ গাইড
+- `PHP_ONLY_DEPLOY.md` — cPanel deploy

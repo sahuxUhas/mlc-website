@@ -2,7 +2,7 @@
 @section('title', ($page->meta_title ?: $page->title).' | '.site_setting('site_name'))
 @section('meta_description', $page->meta_description ?: mc_excerpt($page->excerpt ?: $page->content, 240))
 @section('meta_keywords', $page->meta_keywords)
-@section('og_image', $page->og_image ? asset($page->og_image) : ($page->featured_image ? mc_image($page->featured_image) : ''))
+@section('og_image', $page->og_image ? mc_image($page->og_image) : ($page->featured_image ? mc_image($page->featured_image) : ''))
 @section('canonical', $page->canonical_url ?: route('page.show',$page->slug))
 @section('content')
 <div class="container mx-auto max-w-4xl px-3 py-6 sm:px-4 md:py-8">

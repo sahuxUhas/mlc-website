@@ -66,7 +66,9 @@ function flash(b){var o=b.innerHTML;b.innerHTML='<i class="ph-fill ph-check"></i
 document.querySelectorAll('[data-dropzone]').forEach(function(z){var i=document.querySelector(z.getAttribute('data-dropzone'));if(!i)return;
  ['dragenter','dragover'].forEach(function(ev){z.addEventListener(ev,function(e){e.preventDefault();z.classList.add('ring-2','ring-[#E21D2B]','bg-red-50')})});
  ['dragleave','drop'].forEach(function(ev){z.addEventListener(ev,function(e){e.preventDefault();z.classList.remove('ring-2','ring-[#E21D2B]','bg-red-50')})});
- z.addEventListener('drop',function(e){if(e.dataTransfer&&e.dataTransfer.files.length){i.files=e.dataTransfer.files;i.form&&i.form.submit()}});
+ z.addEventListener('drop',function(e){if(e.dataTransfer&&e.dataTransfer.files.length){i.files=e.dataTransfer.files;i.dispatchEvent(new Event('change'));
+  /* News Editor এ ফাইল ড্রপ করলে ফর্ম স্বয়ংক্রিয়ভাবে সাবমিট হবে না (data-no-auto-submit) */
+  if(!i.hasAttribute('data-no-auto-submit')&&i.form)i.form.submit()}});
  z.addEventListener('click',function(){i.click()})});
 document.querySelectorAll('[data-slug-from]').forEach(function(t){var s=document.querySelector(t.getAttribute('data-slug-from'));if(!s)return;
  t.addEventListener('input',function(){if(s.dataset.touched==='1')return;

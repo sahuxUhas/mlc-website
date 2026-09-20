@@ -1,106 +1,101 @@
 <?php
+
 namespace App\Services;
 
+use App\Services\Images\ImageManager;
+use App\Services\Images\ImgbbProvider;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
- * ImgBB Image Upload Service
- * API Docs: https://api.imgbb.com/
- * User provided API Key: 4bfac8cf6fa4714236c08292299d2862
+ * ImgBB Image Upload Service (Backward-compatible wrapper)।
+ *
+ * প্রকৃত কাজ করে `App\Services\Images\ImgbbProvider` ও `ImageManager` —
+ * ভবিষ্যতে অন্য হোস্টিং ব্যবহার করতে শুধু `.env`-এ IMAGE_PROVIDER বদলালেই হবে।
+ *
+ * নিরাপত্তা:
+ *  - API Key শুধু .env/config থেকে পড়া হয়, কোথাও return বা log করা হয় না।
+ *  - getApiKey() মেথডটি ইচ্ছাকৃতভাবে নেই — UI/JS-এ key যাওয়ার সুযোগ নেই।
+ *
+ * ব্যবহারের জন্য প্রস্তাবিত: MediaUploader / ImageManager ব্যবহার করুন।
  */
 class ImgbbService
 {
-    private string $apiKey;
-    private string $endpoint = 'https://api.imgbb.com/1/upload';
-    private bool $enabled;
+    private ImgbbProvider $provider;
+
+    private ImageManager $manager;
 
     public function __construct()
     {
-        $this->apiKey = (string) (env('IMGBB_API_KEY') ?: config('services.imgbb.key') ?: \App\Models\Setting::get('imgbb_api_key', ''));
-        $this->enabled = (bool) (env('IMGBB_ENABLED', true) ?: \App\Models\Setting::get('imgbb_enabled', '1'));
+        $this->manager = new ImageManager();
+        $this->provider = $this->manager->imgbb();
     }
 
+    /** ImgBB চালু ও key সেট করা আছে কি? */
     public function isEnabled(): bool
     {
-        return $this->enabled && !empty($this->apiKey);
+        return $this->provider->isConfigured();
     }
 
-    public function getApiKey(): string
+    /** অ্যাডমিন UI-তে দেখানোর নিরাপদ তথ্য (API Key ছাড়া) */
+    public function status(): array
     {
-        return $this->apiKey;
+        return [
+            'name'       => $this->provider->name(),
+            'label'      => $this->provider->label(),
+            'enabled'    => $this->provider->isEnabled(),
+            'configured' => $this->provider->isConfigured(),
+        ];
     }
 
     /**
-     * Upload image to ImgBB
-     * @return array ['url', 'display_url', 'thumb', 'medium', 'delete_url', 'width', 'height', 'size']
-     * @throws ValidationException
+     * ImgBB-তে আপলোড।
+     *
+     * @return array{url:string,display_url:string,thumb:string,medium:string,delete_url:string,id:?string,width:?int,height:?int,size:int}
+     *
+     * @throws ValidationException ব্যর্থ হলে (বাংলা, নিরাপদ বার্তা)
      */
     public function upload(UploadedFile $file, ?string $name = null): array
     {
-        if (!$this->isEnabled()) {
-            throw ValidationException::withMessages(['files' => 'ImgBB API key সেট করা নেই। .env এ IMGBB_API_KEY যোগ করুন।']);
+        if (! $this->isEnabled()) {
+            throw ValidationException::withMessages([
+                'files' => 'ছবি হোস্টিং (ImgBB) কনফিগার করা নেই — .env এ IMGBB_API_KEY সেট করুন।',
+            ]);
         }
-
-        // ImgBB accepts base64 or binary - we use base64 for reliability
-        $base64 = base64_encode(file_get_contents($file->getRealPath()));
 
         try {
-            $response = Http::timeout(30)->asForm()->post($this->endpoint, [
-                'key' => $this->apiKey,
-                'image' => $base64,
-                'name' => $name ?: pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
-            ]);
+            $image = $this->provider->upload($file, 'general', $name);
+        } catch (\App\Services\Images\ImageUploadException $e) {
+            Log::warning('ImgbbService upload failed', ['reason' => $e->reason]);
 
-            if (!$response->successful()) {
-                Log::warning('ImgBB upload failed HTTP', ['status' => $response->status(), 'body' => $response->body()]);
-                throw ValidationException::withMessages(['files' => 'ImgBB আপলোড ব্যর্থ (HTTP '.$response->status().'): '.$response->body()]);
-            }
-
-            $json = $response->json();
-
-            if (!isset($json['success']) || $json['success'] !== true) {
-                $error = $json['error']['message'] ?? 'Unknown error';
-                Log::warning('ImgBB upload failed API', ['response' => $json]);
-                throw ValidationException::withMessages(['files' => 'ImgBB API error: '.$error]);
-            }
-
-            $data = $json['data'] ?? [];
-
-            return [
-                'url' => $data['url'] ?? $data['display_url'] ?? '',
-                'display_url' => $data['display_url'] ?? $data['url'] ?? '',
-                'thumb' => $data['thumb']['url'] ?? $data['display_url'] ?? '',
-                'medium' => $data['medium']['url'] ?? $data['display_url'] ?? '',
-                'delete_url' => $data['delete_url'] ?? '',
-                'width' => $data['width'] ?? null,
-                'height' => $data['height'] ?? null,
-                'size' => $data['size'] ?? $file->getSize(),
-                'id' => $data['id'] ?? null,
-                'title' => $data['title'] ?? null,
-            ];
-
-        } catch (ValidationException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error('ImgBB upload exception', ['error' => $e->getMessage()]);
-            throw ValidationException::withMessages(['files' => 'ImgBB আপলোডে সমস্যা: '.$e->getMessage()]);
+            throw ValidationException::withMessages(['files' => $e->getMessage()]);
         }
+
+        return [
+            'url'         => $image->url,
+            'display_url' => $image->displayUrl ?: $image->url,
+            'thumb'       => $image->thumbUrl ?: $image->url,
+            'medium'      => $image->displayUrl ?: $image->url,
+            'delete_url'  => (string) $image->deleteUrl,
+            'id'          => $image->providerId,
+            'width'       => $image->width,
+            'height'      => $image->height,
+            'size'        => $image->size,
+        ];
     }
 
-    /**
-     * Upload multiple files
-     */
+    /** একাধিক ফাইল একসাথে আপলোড */
     public function uploadMany(array $files): array
     {
         $results = [];
+
         foreach ($files as $file) {
             if ($file instanceof UploadedFile) {
                 $results[] = $this->upload($file);
             }
         }
+
         return $results;
     }
 }

@@ -37,6 +37,17 @@ class AlbumController extends Controller
     {
         $album->update($this->validateAlbum($request, $album));
         $this->addPhotos($request, $album);
+
+        // কভার নির্ধারণ — ফর্ম থেকে কখনো raw URL আসে না, শুধু ফটোর id
+        // (ছবি ImgBB তে থাকলেও path সার্ভার-সাইডেই বসে, তাই লিংক কোথাও প্রকাশ পায় না)
+        if ($request->filled('cover_photo_id')) {
+            $photo = $album->photos()->whereKey((int) $request->input('cover_photo_id'))->first();
+
+            if ($photo) {
+                $album->update(['cover_image' => $photo->path]);
+            }
+        }
+
         ActivityLogger::updated($album, 'album', 'অ্যালবাম হালনাগাদ: '.$album->title);
         return back()->with('success', 'অ্যালবাম হালনাগাদ হয়েছে।');
     }
@@ -87,9 +98,25 @@ class AlbumController extends Controller
     public function destroyPhoto(Album $album, AlbumPhoto $photo)
     {
         abort_unless($photo->album_id === $album->id, 404);
-        @unlink(public_path('uploads/'.$photo->path));
+
+        // remote (ImgBB) ছবির ক্ষেত্রে লোকাল unlink করার কিছু নেই — শুধু DB ফাইল মুছে ফেলা হয়
+        if (! preg_match('~^https?://~i', (string) $photo->path)) {
+            $file = public_path('uploads/'.ltrim((string) $photo->path, '/'));
+
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+
+        $wasCover = $album->cover_image === $photo->path;
+
         $photo->delete();
-        $album->update(['photos_count' => $album->photos()->count()]);
+
+        $album->update([
+            'photos_count' => $album->photos()->count(),
+            'cover_image'  => $wasCover ? $album->photos()->first()?->path : $album->cover_image,
+        ]);
+
         return back()->with('success', 'ফটো মুছে ফেলা হয়েছে।');
     }
 

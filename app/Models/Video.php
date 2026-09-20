@@ -13,7 +13,8 @@ class Video extends Model
     protected $fillable = [
         'title', 'slug', 'video_url', 'embed_type', 'thumbnail', 'description',
         'duration', 'is_reel', 'status', 'is_visible', 'published_at',
-        'scheduled_at', 'views', 'sort_order', 'meta_title', 'meta_description',
+        // 'views' fillable নয় — শুধু বাস্তব ভিজিট থেকে গোনা হয় (ViewCounter)
+        'scheduled_at', 'sort_order', 'meta_title', 'meta_description',
     ];
 
     protected function casts(): array

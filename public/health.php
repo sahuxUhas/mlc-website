@@ -43,8 +43,9 @@ if ($env) {
     $envContent = file_get_contents(__DIR__.'/../.env');
     $hasKey = strpos($envContent, 'APP_KEY=base64:') !== false;
     echo "<p>APP_KEY set: <span class='".($hasKey?'ok':'fail')."'>".($hasKey?'ok ✅':'fail ❌ - Empty')."</span></p>";
-    $hasImgbb = strpos($envContent, 'IMGBB_API_KEY=') !== false;
-    echo "<p>ImgBB API Key: <span class='".($hasImgbb?'ok':'fail')."'>".($hasImgbb?'ok ✅ - 4bfac8cf...':'fail ❌')."</span></p>";
+    // নিরাপত্তা: এখানে কখনো Key এর কোনো অংশ দেখানো হয় না — শুধু সেট করা হয়েছে কি না
+    $hasKey = (bool) preg_match('/^IMGBB_API_KEY=.+$/m', $envContent);
+    echo "<p>ImgBB API Key(.env): <span class='".($hasKey?'ok':'fail')."'>".($hasKey?'ok ✅ - সেট করা আছে':'fail ❌ - .env এ সেট করুন')."</span></p>";
 }
 
 // Storage writable
@@ -77,10 +78,11 @@ echo "<pre>
 
 4. Set document_root to public/ (cPanel → Domains)
 5. Visit /health.php to check
-6. Admin: /admin/login (admin@mahalcharinews.com / ChangeMe@123)
+6. Admin Login: /admin/login  (default credentials অবশ্যই বদলে নিন)
 
 No Node.js needed! public/css/app.css already built.
-ImgBB: Images will upload to i.ibb.co using API key 4bfac8cf...
+Images: ImgBB এ যায় (API Key শুধু .env এ; কোনো লিংক UI-তে দেখানো হয় না).
+নিরাপত্তা: deploy শেষে এই health.php ফাইলটি মুছে ফেলা বা পাসওয়ার্ড দিয়ে সুরক্ষিত করা ভালো।
 </pre>";
 
 echo "<p><a href='/'>← Home</a> | <a href='/admin/login'>Admin Login</a> | <a href='https://www.facebook.com/profile.php?id=100068836585906' target='_blank'>Facebook Page</a></p>";

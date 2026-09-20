@@ -20,3 +20,85 @@ body{font-family:'Hind Siliguri','Inter',sans-serif}
 .mc-btn-primary{background:#E21D2B;color:#fff}.mc-btn-primary:hover{background:#B9121E}
 .mc-btn-ghost{background:#f1f5f9;color:#334155}.dark .mc-btn-ghost{background:#1e293b;color:#cbd5e1}
 .mc-card{border:1px solid #e2e8f0;background:#fff;border-radius:.75rem}.dark .mc-card{border-color:#1e293b;background:#0F172A}
+
+/* ==========================================================================
+   News Editor UI (সংবাদ তৈরি/সম্পাদনা পেজ) — ডিজাইনের একই রঙ/টাইপোগ্রাফি
+   (Tailwind build পুরোনো হলেও এই কম্পোনেন্টগুলো সবসময় ঠিকভাবে দেখাবে)
+   ========================================================================== */
+/* --- অ্যাডমিন ২-কলাম লেআউট (বামে কনটেন্ট, ডানে সেটিংস) --- */
+.mc-news-shell{display:grid;grid-template-columns:1fr;gap:1.25rem}
+.mc-news-col{display:flex;flex-direction:column;gap:1.25rem;min-width:0}
+@media(min-width:1280px){.mc-news-shell{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}}
+
+/* --- কনটেন্ট এডিটর টুলবার --- */
+.mc-btn-editor{display:inline-flex;align-items:center;justify-content:center;min-width:1.85rem;height:1.85rem;padding:0 .35rem;border-radius:.4rem;border:1px solid transparent;background:transparent;color:#475569;font-size:.8125rem;line-height:1;cursor:pointer;transition:background .15s,color .15s}
+.mc-btn-editor:hover{background:#e2e8f0;color:#0f172a}
+.mc-btn-editor.is-active{background:#E21D2B;color:#fff}
+.dark .mc-btn-editor{color:#cbd5e1}
+.dark .mc-btn-editor:hover{background:#1e293b;color:#fff}
+.mc-editor{border:1px solid #cbd5e1;border-radius:.75rem;background:#fff;overflow:hidden}
+.mc-editor:focus-within{border-color:#E21D2B;box-shadow:0 0 0 3px rgba(226,29,43,.12)}
+.dark .mc-editor{background:#0B1120;border-color:#334155}
+.mc-editor-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem;padding:.35rem;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.dark .mc-editor-toolbar{background:#111c33;border-color:#1e293b}
+.mc-editor-toolbar .mc-ed-sep{width:1px;height:1rem;background:#cbd5e1;margin:0 .25rem}
+.dark .mc-editor-toolbar .mc-ed-sep{background:#334155}
+.mc-editor textarea{border:0!important;border-radius:0!important;box-shadow:none!important;min-height:22rem;line-height:1.9;font-family:'Tiro Bangla','Hind Siliguri',serif}
+.mc-editor.is-fullscreen{position:fixed;inset:1rem;z-index:120;overflow:auto;box-shadow:0 25px 50px rgba(0,0,0,.35)}
+.mc-editor.is-fullscreen textarea{min-height:70vh}
+
+/* --- ট্যাগ চিপ --- */
+.mc-tag-box{display:flex;flex-wrap:wrap;align-items:center;gap:.375rem;min-height:2.6rem;padding:.35rem .5rem;border:1px solid #cbd5e1;border-radius:.5rem;background:#fff}
+.mc-tag-box:focus-within{border-color:#E21D2B;box-shadow:0 0 0 3px rgba(226,29,43,.12)}
+.dark .mc-tag-box{background:#0B1120;border-color:#334155}
+.mc-tag-box input{flex:1 1 9rem;min-width:8rem;border:0;background:transparent;padding:.2rem 0;font-size:.75rem;color:#0f172a}
+.mc-tag-box input:focus{outline:none}
+.dark .mc-tag-box input{color:#f1f5f9}
+.mc-tag-chip{display:inline-flex;align-items:center;gap:.25rem;background:#EAF7EC;color:#1F7A3D;border:1px solid #C5E7C8;border-radius:999px;padding:.1rem .35rem .1rem .5rem;font-size:11px;font-weight:700}
+.dark .mc-tag-chip{background:#12291C;color:#7BCF95;border-color:#1F7A3D}
+.mc-tag-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:12px;line-height:1;padding:0 .1rem}
+.mc-tag-chip button:hover{color:#E21D2B}
+
+/* --- ছবির ড্রপজোন ও টাইল --- */
+.mc-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25rem;padding:1.5rem 1rem;border:2px dashed #cbd5e1;border-radius:.75rem;background:#f8fafc;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.mc-dropzone:hover,.mc-dropzone.is-drag{border-color:#E21D2B;background:#fef2f2}
+.dark .mc-dropzone{background:#0f172a80;border-color:#334155}
+.mc-dropzone i{font-size:1.75rem;color:#94a3b8}
+.mc-upload-tile{position:relative;border-radius:.6rem;overflow:hidden;border:1px solid #e2e8f0;background:#fff}
+.dark .mc-upload-tile{border-color:#334155;background:#0f172a}
+.mc-upload-tile img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block}
+.mc-upload-tile .mc-tile-bar{display:flex;align-items:center;justify-content:space-between;gap:.25rem;padding:.2rem .35rem;font-size:10px;color:#475569}
+.dark .mc-upload-tile .mc-tile-bar{color:#cbd5e1}
+
+/* --- গ্যালারি গ্রিড --- */
+.mc-gallery-grid{display:grid;gap:.75rem;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:640px){.mc-gallery-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1024px){.mc-gallery-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.mc-gallery-item{position:relative;border:1px solid #e2e8f0;border-radius:.75rem;overflow:hidden;background:#fff}
+.mc-gallery-item.is-featured{border-color:#E21D2B;box-shadow:0 0 0 2px rgba(226,29,43,.2)}
+.mc-gallery-item img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#f1f5f9}
+.dark .mc-gallery-item{background:#0f172a;border-color:#334155}
+.mc-gallery-bar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:.25rem;padding:.25rem;background:rgba(0,0,0,.72)}
+.mc-gallery-bar button,.mc-gallery-bar a{display:inline-flex;align-items:center;gap:.15rem;border:0;border-radius:.35rem;background:rgba(255,255,255,.16);color:#fff;padding:.2rem .35rem;font-size:10px;font-weight:700;cursor:pointer;text-decoration:none}
+.mc-gallery-bar button:hover,.mc-gallery-bar a:hover{background:rgba(255,255,255,.34)}
+.mc-gallery-bar button.is-danger:hover{background:#dc2626}
+.mc-badge-featured{position:absolute;top:.35rem;left:.35rem;z-index:2;background:#E21D2B;color:#fff;font-size:9px;font-weight:800;padding:.1rem .35rem;border-radius:.25rem}
+.mc-badge-order{position:absolute;top:.35rem;right:.35rem;z-index:2;background:rgba(15,23,42,.85);color:#fff;font-size:9px;font-weight:800;padding:.1rem .35rem;border-radius:.25rem}
+.mc-gallery-item[draggable="true"]{cursor:grab}
+.mc-gallery-item.is-dragging{opacity:.5}
+
+/* --- প্রাকদর্শন (মোডাল / লাইভ) --- */
+.mc-preview-frame{width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:.75rem;background:#fff}
+.mc-preview-frame.is-mobile{width:390px;max-width:100%;height:70vh;margin:0 auto;display:block}
+.dark .mc-preview-frame{border-color:#334155}
+.mc-preview-sheet{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;border:1px solid #e2e8f0;border-radius:.6rem;background:#f8fafc;font-size:11px;color:#475569}
+.dark .mc-preview-sheet{background:#0f172a;border-color:#334155;color:#cbd5e1}
+.mc-tip{display:block;margin-top:.25rem;font-size:11px;color:#64748b}
+.dark .mc-tip{color:#94a3b8}
+.mc-upload-errors{list-style:disc;padding-left:1.1rem;margin-top:.4rem;font-size:11px;color:#b45309}
+.dark .mc-upload-errors{color:#fcd34d}
+.mc-sticky-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.5rem;margin-top:1.25rem;padding:.75rem;border:1px solid #e2e8f0;border-radius:.75rem;background:rgba(255,255,255,.96);position:sticky;bottom:0;z-index:20}
+.dark .mc-sticky-actions{background:rgba(15,23,42,.96);border-color:#1e293b}
+.mc-toast-inline{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);z-index:150;display:flex;align-items:center;gap:.4rem;border-radius:999px;padding:.5rem 1rem;font-size:12px;font-weight:700;color:#fff;background:#0f172a;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.mc-toast-inline.is-error{background:#dc2626}
+.mc-toast-inline.is-ok{background:#047857}

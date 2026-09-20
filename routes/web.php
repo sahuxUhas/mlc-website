@@ -117,12 +117,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('news', [Admin\NewsController::class, 'store'])
                 ->middleware('permission:news.create')->name('news.store');
             Route::get('news/{post}/edit', [Admin\NewsController::class, 'edit'])->name('news.edit');
+            Route::get('news/{post}/preview', [Admin\NewsController::class, 'preview'])->name('news.preview');
             Route::put('news/{post}', [Admin\NewsController::class, 'update'])->name('news.update');
+
+            // Content Editor এর ছবি আপলোড (ImgBB → DB রেফারেন্স → {{media:ID}} শর্টকোড)
+            Route::post('news/media/upload', [Admin\NewsController::class, 'uploadEditorMedia'])->name('news.media.store');
             Route::post('news/{post}/status/{status}', [Admin\NewsController::class, 'changeStatus'])->name('news.status');
             Route::post('news/bulk', [Admin\NewsController::class, 'bulk'])->name('news.bulk');
             Route::post('news/{post}/images/reorder', [Admin\NewsController::class, 'reorderImages'])->name('news.images.reorder');
             Route::post('news/{post}/featured', [Admin\NewsController::class, 'setFeaturedImage'])->name('news.featured');
             Route::post('news/{post}/images', [Admin\NewsController::class, 'addImages'])->name('news.images.store');
+            Route::put('news/{post}/images/{image}', [Admin\NewsController::class, 'updateImage'])->name('news.images.update');
             Route::delete('news/{post}/images/{image}', [Admin\NewsController::class, 'destroyImage'])->name('news.images.destroy');
         });
         Route::delete('news/{post}', [Admin\NewsController::class, 'destroy'])
@@ -286,6 +291,17 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('newsletter/{subscriber}', [Admin\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Image Proxy — হোস্টিং (ImgBB) এর ছবি নিজের ডোমেইন দিয়ে
+|--------------------------------------------------------------------------
+| `mc_image()` সব remote ছবির জন্য এই signed route ব্যবহার করে, ফলে raw
+| hosting URL কখনো ব্রাউজারের HTML source-এ যায় না। Signature ছাড়া 404।
+*/
+Route::get('/img/{token}', [\App\Http\Controllers\ImageProxyController::class, 'show'])
+    ->where('token', '[A-Za-z0-9\-_]+')
+    ->name('image.proxy');
 
 /*
 |--------------------------------------------------------------------------

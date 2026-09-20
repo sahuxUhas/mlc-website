@@ -34,7 +34,8 @@
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
                 <td class="px-4 py-2.5"><p class="max-w-sm truncate font-serif text-sm font-bold text-slate-900 dark:text-white">{{ $item->title ?? $item->name ?? $item->file_name ?? '—' }}</p>
                     @if($item->excerpt ?? false)<p class="line-clamp-1 text-[11px] text-slate-500">{{ mc_excerpt($item->excerpt,60) }}</p>@endif</td>
-                <td class="px-4 py-2.5"><code class="text-[11px] text-slate-500" dir="ltr">{{ $item->slug ?? $item->path ?? '—' }}</code></td>
+                {{-- raw image URL কখনো টেক্সট হিসেবে দেখানো হয় না (slug/ফাইলনাম-ই যথেষ্ট) --}}
+                <td class="px-4 py-2.5"><code class="text-[11px] text-slate-500" dir="ltr">{{ $item->slug ?? $item->file_name ?? '—' }}</code></td>
                 <td class="px-4 py-2.5 text-xs text-slate-600 dark:text-slate-300">{{ $item->deleted_at ? bn_date($item->deleted_at).' · '.bn_num(\Illuminate\Support\Carbon::parse($item->deleted_at)->format('h:i A')) : '—' }}</td>
                 <td class="px-4 py-2.5"><div class="flex items-center justify-end gap-1">
                     <form action="{{ route('admin.trash.restore',[$type,$item->id]) }}" method="POST" class="inline">@csrf

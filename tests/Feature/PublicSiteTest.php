@@ -37,11 +37,16 @@ class PublicSiteTest extends TestCase
     {
         $post = Post::factory()->create();
 
-        $this->get('/news/'.$post->slug);
-        $first = $post->fresh()->views;
+        // বট ফিল্টার এড়াতে সত্যিকারের ব্রাউজারের মতো User-Agent পাঠাতে হয়
+        $headers = ['User-Agent' => 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36'];
 
-        $this->get('/news/'.$post->slug);
-        $this->assertSame($first, $post->fresh()->views, 'একই সেশনে ভিউ দ্বিগুণ হওয়া উচিত নয়');
+        $this->withHeaders($headers)->get('/news/'.$post->slug)->assertOk();
+        $this->assertSame(1, (int) $post->fresh()->views, 'প্রথম ভিজিটে ঠিক ১ ভিউ');
+
+        $this->withHeaders($headers)->get('/news/'.$post->slug)->assertOk();
+        $this->assertSame(1, (int) $post->fresh()->views, 'একই সেশনে ভিউ দ্বিগুণ হওয়া উচিত নয়');
+
+        // বিস্তারিত কভারেজ: tests/Feature/ViewCounterTest.php
     }
 
     public function test_category_page_lists_only_that_category_posts(): void

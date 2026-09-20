@@ -49,7 +49,7 @@ class SettingSeeder extends Seeder
         Setting::put('site_maintenance', '0', 'bool', 'behavior');
 
         // ImgBB Settings - user provided key
-        Setting::put('imgbb_api_key', '4bfac8cf6fa4714236c08292299d2862', 'string', 'media');
+        // নিরাপত্তা: API Key ডাটাবেসে সিড করা হয় না — শুধু সার্ভারের .env (IMGBB_API_KEY) এ থাকে।
         Setting::put('imgbb_enabled', '1', 'bool', 'media');
         Setting::put('imgbb_expiration', '0', 'string', 'media'); // 0 = never expire
 

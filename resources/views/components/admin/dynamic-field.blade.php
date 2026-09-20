@@ -13,8 +13,10 @@
 @elseif($type === 'textarea')
     <x-admin.field-textarea :name="$key" :label="$label" :value="$value" :rows="4" :hint="$hint" />
 @elseif($type === 'image')
-    <x-admin.field-image :name="$key" :label="$label" :current="$value" hint="আপলোড করুন অথবা সরাসরি URL বসান" />
-    <x-admin.field-input :name="$key.'_url'" label="অথবা সরাসরি URL" type="url" placeholder="https://…" hint="আপলোড করা ফাইলকে অগ্রাধিকার দেওয়া হবে" />
+    {{-- ছবি শুধু সরাসরি আপলোড করা হয় — কোনো URL/লিংক বসানোর ইনপুট নেই --}}
+    <x-admin.field-image :name="$key" :label="$label" :current="$value"
+        :accept="$field['accept'] ?? 'image/jpeg,image/png,image/webp'"
+        hint="ফাইল নির্বাচন করলেই ছবি হোস্টিং API (ImgBB) তে যাবে — লিংক বসানোর সুবিধা নেই" />
 @elseif($type === 'number')
     <x-admin.field-input :name="$key" :label="$label" type="number" :value="$value" :hint="$hint" step="1" />
 @else

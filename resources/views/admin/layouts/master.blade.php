@@ -4,7 +4,7 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title','ড্যাশবোর্ড') | অ্যাডমিন | {{ site_setting('site_name','দৈনিক মহালছড়ি নিউজ') }}</title>
-    <link rel="icon" href="{{ site_setting('site_favicon') ? asset(site_setting('site_favicon')) : mc_placeholder_svg() }}">
+    <link rel="icon" href="{{ site_setting('site_favicon') ? mc_image(site_setting('site_favicon')) : mc_placeholder_svg() }}">
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=Tiro+Bangla:ital@0;1&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
