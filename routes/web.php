@@ -32,6 +32,8 @@ Route::middleware(['mc.publish'])->group(function () {
 
     // ভিডিও
     Route::get('/videos', [PublicSite\VideoController::class, 'index'])->name('videos.index');
+    Route::post('/videos/{slug}/view', [PublicSite\VideoController::class, 'recordView'])
+        ->middleware('throttle:30,1')->name('videos.view');
     Route::get('/videos/{slug}', [PublicSite\VideoController::class, 'show'])
         ->middleware('mc.trackview:video')->name('videos.show');
 
