@@ -173,6 +173,67 @@
         });
     }, 6000);
 
+    /* ===== ভিডিও গ্যালারি: একসাথে একাধিক প্লে নয়, অটোপ্লে নয়, বাস্তব ভিউ ===== */
+    (function bindVideoGallery() {
+        var feeds = document.querySelectorAll('[data-mc-video-feed]');
+        if (!feeds.length) return;
+
+        function pauseOthers(current) {
+            document.querySelectorAll('video[data-mc-player]').forEach(function (v) {
+                if (v !== current && !v.paused) v.pause();
+            });
+        }
+
+        function recordView(el) {
+            if (!el || el.getAttribute('data-view-sent') === '1' || el.getAttribute('data-view-pending') === '1') return;
+            var url = el.getAttribute('data-view-url');
+            if (!url) return;
+            el.setAttribute('data-view-pending', '1');
+            var tokenEl = document.querySelector('meta[name="csrf-token"]');
+            var headers = { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' };
+            if (tokenEl) headers['X-CSRF-TOKEN'] = tokenEl.getAttribute('content');
+            fetch(url, { method: 'POST', headers: headers, credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.slug || data.label == null) {
+                        el.removeAttribute('data-view-pending');
+                        return;
+                    }
+                    el.setAttribute('data-view-sent', '1');
+                    var sel = '[data-mc-views="' + (window.CSS && CSS.escape ? CSS.escape(data.slug) : data.slug) + '"]';
+                    document.querySelectorAll(sel).forEach(function (n) { n.textContent = data.label; });
+                })
+                .catch(function () { el.removeAttribute('data-view-pending'); });
+        }
+
+        document.addEventListener('play', function (e) {
+            var v = e.target;
+            if (!v || !v.getAttribute || !v.hasAttribute('data-mc-player')) return;
+            pauseOthers(v);
+            recordView(v);
+        }, true);
+
+        if ('IntersectionObserver' in window) {
+            var timers = new WeakMap();
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    var el = en.target;
+                    if (en.isIntersecting && en.intersectionRatio >= 0.55) {
+                        if (timers.has(el) || el.getAttribute('data-view-sent') === '1') return;
+                        timers.set(el, setTimeout(function () {
+                            timers.delete(el);
+                            recordView(el);
+                        }, 2000));
+                    } else {
+                        var pending = timers.get(el);
+                        if (pending) { clearTimeout(pending); timers.delete(el); }
+                    }
+                });
+            }, { threshold: [0.55] });
+            document.querySelectorAll('[data-mc-video-feed] [data-mc-embed]').forEach(function (el) { io.observe(el); });
+        }
+    })();
+
     /* ===== লেজি ইমেজ (native lazy loading fallback) ===== */
     if (!('loading' in HTMLImageElement.prototype) && 'IntersectionObserver' in window) {
         var io = new IntersectionObserver(function (entries) {

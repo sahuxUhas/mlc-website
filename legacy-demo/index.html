@@ -725,6 +725,24 @@
             MC_STORE.notify();
         };
 
+        // ভিডিওর বাস্তব ভিউ — প্লে করলে এক ভিজিটর ১২ ঘণ্টায় একবার। প্লেয়ার রিমাউন্ট হয় না।
+        const mcCountVideoView = (id) => {
+            const db = mcDB();
+            const v = (db.videos || []).find(x => String(x.id) === String(id));
+            if (!v || v.status !== 'published') return 0;
+            const now = Date.now();
+            const seen = mcViewSeen();
+            const key = 'v' + id;
+            if (!(seen[key] && (now - seen[key]) < MC_VIEW_COOLDOWN_MS)) {
+                seen[key] = now;
+                Object.keys(seen).forEach(k => { if (now - seen[k] > 30 * 24 * 60 * 60 * 1000) delete seen[k]; });
+                try { localStorage.setItem(MC_VIEW_SEEN_KEY, JSON.stringify(seen)); } catch (e) {}
+                v.views = (v.views || 0) + 1;
+                try { MC_STORE.save(); } catch (e) {}
+            }
+            return v.views || 0;
+        };
+
         // ==================================================================
         //  MC CMS — রাউটার
         //  ভেতরের ঠিকানা হ্যাশে (#/news/slug) — স্ট্যাটিক ফাইলেও রিলোড/শেয়ার
@@ -2423,127 +2441,156 @@
             );
         };
 
-                // ---- সরাসরি HTML5 ভিডিও প্লেয়ার - Fixed ----
-        const McFbVideo = ({ url, title, poster, autoPlay = false, isReel = false }) => {
-            const videoRef = React.useRef(null);
-            const [hasError, setHasError] = React.useState(false);
-            const [isLoading, setIsLoading] = React.useState(true);
+                // ---- সরাসরি ভিডিও প্লেয়ার (এরর বক্স / HTML5 বার্তা / ফেসবুক বাটন নেই) ----
+        const mcIsFileVideo = (url) => {
+            if (!url || typeof url !== 'string') return false;
+            const path = url.split('?')[0].split('#')[0].toLowerCase();
+            return /\.(mp4|webm|ogg|ogv|m4v)$/.test(path) || url.includes('.mp4');
+        };
+        const mcYoutubeId = (url) => {
+            const m = String(url || '').match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+            return m ? m[1] : '';
+        };
+        const mcResolvePlayer = (url) => {
+            const raw = String(url || '');
+            let matched = null;
+            if (typeof MOCK_VIDEOS !== 'undefined') {
+                matched = MOCK_VIDEOS.find(v => v.videoUrl === raw || v.fbUrl === raw || v.reelUrl === raw) || null;
+            }
+            const file = [raw, matched && matched.videoUrl].find(mcIsFileVideo) || '';
+            const yt = mcYoutubeId(raw) || mcYoutubeId(matched && matched.videoUrl);
+            const fb = (matched && (matched.reelUrl || matched.fbUrl)) || (/facebook\.com|fb\.watch|fb\.com/.test(raw) ? raw : '');
+            return { file: file, yt: yt, fb: fb, poster: matched ? matched.thumb : '', reel: !!(matched && matched.isReel) };
+        };
+        const McFbVideo = ({ url, title, poster, isReel = false, onFirstPlay }) => {
+            const ref = React.useRef(null);
+            const counted = React.useRef(false);
+            const resolved = React.useMemo(() => mcResolvePlayer(url), [url]);
+            const [mode, setMode] = React.useState(resolved.file ? 'file' : (resolved.yt ? 'yt' : (resolved.fb ? 'fb' : 'none')));
+            const vertical = !!(isReel || resolved.reel) && mode === 'fb';
 
-            const matched = React.useMemo(() => {
-                if (!url) return (typeof MOCK_VIDEOS !== 'undefined' ? MOCK_VIDEOS[0] : null);
-                if (typeof MOCK_VIDEOS === 'undefined') return null;
-                return MOCK_VIDEOS.find(v =>
-                    v.videoUrl === url ||
-                    v.fbUrl === url ||
-                    v.reelUrl === url ||
-                    (v.slug && url.includes(v.slug)) ||
-                    (v.id && url.includes(v.id))
-                ) || null;
-            }, [url]);
-
-            const directSrc = React.useMemo(() => {
-                if (url && (url.endsWith('.mp4') || url.includes('.mp4'))) return url;
-                if (matched && matched.videoUrl && (matched.videoUrl.endsWith('.mp4') || matched.videoUrl.includes('.mp4'))) return matched.videoUrl;
-                // fallback to matched videoUrl even if not mp4, but prefer mp4
-                return matched ? matched.videoUrl : (url && url.startsWith('http') ? url : null);
-            }, [url, matched]);
-            
-            const directPoster = poster || (matched ? matched.thumb : null);
-            const targetFbUrl = (matched ? matched.fbUrl : (url && url.startsWith('http') ? url : null));
-            const isVertical = isReel || (matched && matched.isReel);
-
-            const containerRatio = isVertical ? 'aspect-[9/16] max-w-[420px] mx-auto' : 'aspect-video';
-
-            // Reset error when src changes
             React.useEffect(() => {
-                setHasError(false);
-                setIsLoading(true);
-            }, [directSrc]);
+                const el = ref.current;
+                if (!el || mode !== 'file') return undefined;
+                const onPlay = () => {
+                    document.querySelectorAll('video[data-mc-player]').forEach((other) => {
+                        if (other !== el && !other.paused) other.pause();
+                    });
+                    if (!counted.current) {
+                        counted.current = true;
+                        if (onFirstPlay) onFirstPlay();
+                    }
+                };
+                const onError = () => {
+                    if (resolved.yt) setMode('yt');
+                    else if (resolved.fb) setMode('fb');
+                };
+                el.addEventListener('play', onPlay);
+                el.addEventListener('error', onError);
+                return () => {
+                    el.removeEventListener('play', onPlay);
+                    el.removeEventListener('error', onError);
+                };
+            }, [mode, resolved.yt, resolved.fb, onFirstPlay]);
 
-            if (hasError) {
+            if (mode === 'none') return null;
+
+            const box = vertical
+                ? 'relative mx-auto aspect-[9/16] w-full max-w-[420px] overflow-hidden rounded-xl bg-black'
+                : 'relative aspect-video w-full overflow-hidden rounded-xl bg-black';
+            const fill = { position: 'absolute', inset: 0, width: '100%', height: '100%', border: 0, background: '#000' };
+
+            if (mode === 'yt') {
                 return (
-                    <div className="space-y-2.5">
-                        <div className={`relative overflow-hidden rounded-2xl bg-gray-900 shadow-xl border border-gray-200 dark:border-[#263246] ${containerRatio} flex flex-col items-center justify-center p-6 text-center`}>
-                            {directPoster && <img src={directPoster} alt={title || 'ভিডিও'} className="absolute inset-0 w-full h-full object-cover opacity-40" />}
-                            <div className="relative z-10 flex flex-col items-center gap-3">
-                                <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center">
-                                    <i className="ph ph-video text-2xl text-white"></i>
-                                </div>
-                                <p className="text-white font-bold text-sm">ভিডিও লোড হচ্ছে না</p>
-                                <p className="text-white/70 text-xs max-w-[280px]">নেটওয়ার্ক সমস্যা বা ব্রাউজার সাপোর্ট না থাকায় ভিডিও চালানো যায়নি। নিচের বাটনে ক্লিক করে Facebook-এ দেখুন বা আবার চেষ্টা করুন।</p>
-                                <div className="flex flex-wrap gap-2 justify-center mt-1">
-                                    <button onClick={() => setHasError(false)} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white text-gray-900 text-xs font-bold hover:bg-gray-100">
-                                        <i className="ph ph-arrow-clockwise"></i> আবার চেষ্টা করুন
-                                    </button>
-                                    {targetFbUrl && (
-                                        <a href={targetFbUrl} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
-                                            <i className="ph-fill ph-facebook-logo"></i> Facebook-এ দেখুন
-                                        </a>
-                                    )}
-                                </div>
-                                {directSrc && <p className="text-[10px] text-white/50 break-all mt-2 max-w-full">{directSrc}</p>}
-                            </div>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-[#182233] dark:border-[#263246]">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 text-xs font-bold border border-amber-500/20">
-                                <i className="ph ph-warning"></i> HTML5 প্লেয়ার - ত্রুটি
-                            </span>
-                            {targetFbUrl && (
-                                <a href={targetFbUrl} target="_blank" rel="noopener" className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
-                                    <i className="ph-fill ph-facebook-logo"></i> Facebook-এ দেখুন
-                                </a>
-                            )}
-                        </div>
+                    <div className={box}>
+                        <iframe
+                            title={title || 'ভিডিও'}
+                            style={fill}
+                            src={'https://www.youtube-nocookie.com/embed/' + resolved.yt + '?rel=0&modestbranding=1&playsinline=1&autoplay=0'}
+                            allow="encrypted-media; picture-in-picture; fullscreen"
+                            allowFullScreen
+                            loading="lazy"
+                        />
                     </div>
                 );
             }
+            if (mode === 'fb') {
+                return (
+                    <div className={box}>
+                        <iframe
+                            title={title || 'ভিডিও'}
+                            style={fill}
+                            src={'https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(resolved.fb) + '&show_text=false&autoplay=false&width=1280'}
+                            allow="encrypted-media; picture-in-picture; fullscreen"
+                            allowFullScreen
+                            loading="lazy"
+                        />
+                    </div>
+                );
+            }
+            return (
+                <div className={box}>
+                    <video
+                        ref={ref}
+                        data-mc-player="1"
+                        style={{ ...fill, objectFit: 'contain' }}
+                        src={resolved.file}
+                        poster={poster || resolved.poster || undefined}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        controlsList="nodownload"
+                        referrerPolicy="no-referrer"
+                        title={title || 'ভিডিও'}
+                    />
+                </div>
+            );
+        };
+
+        // ==================================================================
+        //  ভিডিও গ্যালারি — প্রতিটি ভিডিও একটার নিচে একটা, সরাসরি প্লেয়ার
+        // ==================================================================
+        const McVideosPage = () => {
+            const vids = api.getVideos();
+            const [counts, setCounts] = React.useState({});
+            const viewOf = (v) => (counts[v.id] != null ? counts[v.id] : (v.views || 0));
 
             return (
-                <div className="space-y-2.5">
-                    <div className={`relative overflow-hidden rounded-2xl bg-black shadow-xl border border-gray-200 dark:border-[#263246] ${containerRatio}`}>
-                        {directSrc ? (
-                            <video
-                                ref={videoRef}
-                                src={directSrc}
-                                poster={directPoster}
-                                controls
-                                playsInline
-                                preload="metadata"
-                                autoPlay={autoPlay}
-                                crossOrigin="anonymous"
-                                onLoadedData={() => setIsLoading(false)}
-                                onError={() => setHasError(true)}
-                                className="w-full h-full object-contain bg-black"
-                            />
-                        ) : targetFbUrl ? (
-                            <iframe
-                                title={title || 'ভিডিও'}
-                                src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(targetFbUrl)}&show_text=false&t=0`}
-                                loading="lazy"
-                                className="absolute inset-0 h-full w-full border-0"
-                                allowFullScreen
-                                allow="encrypted-media; picture-in-picture; autoplay; clipboard-write"
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white text-sm">ভিডিও লিংক পাওয়া যায়নি</div>
-                        )}
-                        {isLoading && directSrc && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                                <div className="h-8 w-8 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-                            </div>
-                        )}
+                <div className="container mx-auto max-w-6xl px-3 py-6 sm:px-4 md:py-8">
+                    <div className="mb-6 flex items-center gap-2.5 border-b-2 border-[#D50E18] pb-3">
+                        <span className="h-6 w-2 rounded-sm bg-[#E21D2B]"></span>
+                        <h1 className="font-serif text-xl font-bold text-gray-900 dark:text-[#F1F5F9] sm:text-2xl">ভিডিও</h1>
+                        <span className="mr-auto text-xs text-gray-500 dark:text-[#94A3B8]">{mcBn(vids.length)}টি ভিডিও</span>
                     </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-200 dark:bg-[#182233] dark:border-[#263246]">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 text-xs font-bold border border-emerald-500/20">
-                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            HTML5 প্লেয়ার - সরাসরি চলবে
-                        </span>
-                        {targetFbUrl && (
-                            <a href={targetFbUrl} target="_blank" rel="noopener" className="ml-auto inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#1877F2] text-white text-xs font-bold hover:bg-blue-700">
-                                <i className="ph-fill ph-facebook-logo"></i> Facebook-এ দেখুন
-                            </a>
-                        )}
-                    </div>
+
+                    {vids.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center dark:border-[#263246] dark:bg-[#182233]">
+                            <i className="ph ph-video-camera text-4xl text-gray-300"></i>
+                            <p className="mt-3 font-serif font-bold text-gray-700 dark:text-gray-300">এখনও কোনো ভিডিও প্রকাশিত হয়নি</p>
+                        </div>
+                    ) : (
+                        <div className="mx-auto flex w-full max-w-3xl flex-col gap-10">
+                            {vids.map((v) => (
+                                <article key={v.id} className="min-w-0">
+                                    <McFbVideo
+                                        url={v.videoUrl || v.fbUrl}
+                                        poster={v.thumb}
+                                        title={v.title}
+                                        isReel={!!v.isReel}
+                                        onFirstPlay={() => setCounts((c) => ({ ...c, [v.id]: mcCountVideoView(v.id) }))}
+                                    />
+                                    <h2 className="mt-3 font-serif text-lg font-bold leading-snug text-gray-900 dark:text-[#F1F5F9] sm:text-xl">{v.title}</h2>
+                                    {v.description ? (
+                                        <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-gray-600 dark:text-[#94A3B8]">{v.description}</p>
+                                    ) : null}
+                                    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-[#94A3B8]">
+                                        <span><i className="ph ph-calendar-blank mr-1 text-[#D50E18]"></i>{formatBanglaDate(v.publishedAt)}</span>
+                                        <span><i className="ph ph-eye mr-1 text-[#D50E18]"></i>{mcBn(viewOf(v))} বার দেখা হয়েছে</span>
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         };
@@ -3125,180 +3172,6 @@
         };
 
         // ==================================================================
-        //  /videos  ও  /videos/{slug}
-        // ==================================================================
-        //  /videos  ও  /videos/{slug}
-        // ==================================================================
-                // ==================================================================
-        //  ভিডিও গ্যালারি পেজ (HTML5 ডিরেক্ট প্লেয়ার + ভিডিও তালিকা)
-        // ==================================================================
-                // ==================================================================
-        //  ভিডিও গ্যালারি পেজ (HTML5 ডিরেক্ট প্লেয়ার + ভিডিও তালিকা)
-        // ==================================================================
-        const McVideosPage = () => {
-            const { navigate } = React.useContext(AppContext);
-            const vids = api.getVideos();
-            const [selectedVideo, setSelectedVideo] = React.useState(vids[0] || null);
-            const playerRef = React.useRef(null);
-
-            const handleSelectAndPlay = (v) => {
-                setSelectedVideo(v);
-                if (playerRef.current) {
-                    playerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            };
-
-            return (
-                <div className="container mx-auto px-4 py-8 max-w-6xl">
-                    {/* শিরোনাম ও ব্রেডক্রাম্ব */}
-                    <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 dark:border-[#263246] pb-4">
-                        <div>
-                            <h1 className="font-serif text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
-                                <span className="inline-block h-6 w-1.5 rounded-full bg-[#E21D2B]"></span>
-                                <span>ভিডিও গ্যালারি</span>
-                            </h1>
-                            <p className="text-xs text-gray-500 dark:text-[#94A3B8] mt-1">মহালছড়ি ও পার্বত্য চট্টগ্রামের সরাসরি ভিডিও সংবাদ (সকল ভিডিও ব্রাউজারে সরাসরি প্লে হবে)</p>
-                        </div>
-                        <span className="rounded-full bg-red-100 dark:bg-red-950/40 text-brand-red px-3 py-1 text-xs font-bold">
-                            মোট {mcBn(vids.length)} টি ভিডিও
-                        </span>
-                    </div>
-
-                    {/* মূল প্লেয়ার (Hero Direct HTML5 Player) */}
-                    {selectedVideo && (
-                        <div ref={playerRef} className="mb-10 rounded-2xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm dark:border-[#263246] dark:bg-[#182233]">
-                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
-                                <div className="lg:col-span-7">
-                                    <McFbVideo
-                                        key={selectedVideo.id}
-                                        url={selectedVideo.videoUrl}
-                                        poster={selectedVideo.thumb}
-                                        title={selectedVideo.title}
-                                        autoPlay={false}
-                                        isReel={selectedVideo.isReel}
-                                    />
-                                </div>
-                                <div className="lg:col-span-5 space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <span className="inline-block rounded-md bg-[#E21D2B] px-2.5 py-1 text-xs font-bold text-white uppercase">
-                                            এখন নির্বাচিত
-                                        </span>
-                                        {selectedVideo.duration && (
-                                            <span className="inline-block rounded-md bg-gray-100 dark:bg-[#0D1422] border border-gray-200 dark:border-[#263246] px-2 py-0.5 text-xs font-bold text-gray-600 dark:text-gray-300">
-                                                সময়: {selectedVideo.duration}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h2 className="font-serif text-xl sm:text-2xl font-bold leading-snug text-gray-900 dark:text-[#F1F5F9]">
-                                        {selectedVideo.title}
-                                    </h2>
-                                    <p className="text-xs sm:text-sm text-gray-600 dark:text-[#94A3B8] leading-relaxed">
-                                        {selectedVideo.description}
-                                    </p>
-                                    <div className="pt-3 border-t border-gray-100 dark:border-[#263246] flex flex-wrap items-center justify-between text-xs text-gray-500 dark:text-[#94A3B8]">
-                                        <span><i className="ph ph-calendar mr-1 text-brand-red"></i>{formatBanglaDate(selectedVideo.publishedAt)}</span>
-                                        <span><i className="ph ph-eye mr-1 text-brand-red"></i>{mcBn((selectedVideo.views || 0).toLocaleString('bn-BD'))} বার দেখা হয়েছে</span>
-                                    </div>
-                                    <div className="pt-2 flex flex-wrap gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate('/videos/' + selectedVideo.slug)}
-                                            className="px-4 py-2 rounded-xl bg-gray-900 text-white dark:bg-gray-700 hover:bg-[#E21D2B] text-xs font-bold transition-colors flex items-center gap-1.5"
-                                        >
-                                            <span>পূর্ণাঙ্গ পেজ ও মন্তব্য</span>
-                                            <i className="ph ph-arrow-right"></i>
-                                        </button>
-                                        <a
-                                            href={selectedVideo.fbUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="px-4 py-2 rounded-xl bg-[#1877F2] text-white hover:bg-blue-700 text-xs font-bold transition-colors flex items-center gap-1.5"
-                                        >
-                                            <i className="ph-fill ph-facebook-logo"></i> Facebook
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* সকল ভিডিও তালিকা */}
-                    <div className="mb-4">
-                        <h3 className="font-serif text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <i className="ph-fill ph-video text-[#E21D2B]"></i>
-                            <span>সকল ভিডিও সংকলন</span>
-                        </h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                        {vids.map(v => {
-                            const isCurrent = selectedVideo && selectedVideo.id === v.id;
-                            return (
-                                <div
-                                    key={v.id}
-                                    className={`group overflow-hidden rounded-2xl border bg-white shadow-sm hover:shadow-md dark:bg-[#182233] transition-all flex flex-col justify-between ${
-                                        isCurrent ? 'border-[#E21D2B] ring-2 ring-[#E21D2B]/30' : 'border-gray-200 dark:border-[#263246]'
-                                    }`}
-                                >
-                                    <div className="cursor-pointer" onClick={() => handleSelectAndPlay(v)}>
-                                        <div className="relative aspect-video overflow-hidden bg-black">
-                                            <img
-                                                src={v.thumb || PLACEHOLDER_IMG}
-                                                loading="lazy"
-                                                decoding="async"
-                                                onError={imgFallback}
-                                                alt={v.title}
-                                                className="h-full w-full object-cover opacity-90 transition-transform duration-500 group-hover:scale-105"
-                                            />
-                                            {v.duration && (
-                                                <span className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                                    {v.duration}
-                                                </span>
-                                            )}
-                                            <span className="absolute inset-0 flex items-center justify-center">
-                                                <span className={`flex h-11 w-11 items-center justify-center rounded-full pl-0.5 text-white shadow-lg transition-transform group-hover:scale-110 ${isCurrent ? 'bg-[#22C55E]' : 'bg-[#E21D2B]/90'}`}>
-                                                    <i className="ph-fill ph-play text-lg"></i>
-                                                </span>
-                                            </span>
-                                        </div>
-                                        <div className="p-3.5">
-                                            <h4 className="font-serif text-sm font-bold leading-snug text-gray-900 line-clamp-2 dark:text-[#F1F5F9] group-hover:text-[#E21D2B] dark:group-hover:text-[#22C55E] transition-colors">
-                                                {v.title}
-                                            </h4>
-                                            <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500 dark:text-[#94A3B8]">
-                                                <span><i className="ph ph-clock mr-1"></i>{timeAgo(v.publishedAt)}</span>
-                                                <span>{mcBn((v.views || 0).toLocaleString('bn-BD'))} বার</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-3.5 pt-0 border-t border-gray-100 dark:border-[#263246] mt-2 flex items-center justify-between gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSelectAndPlay(v)}
-                                            className={`text-xs font-bold flex items-center gap-1 ${isCurrent ? 'text-[#22C55E]' : 'text-[#E21D2B] dark:text-[#22C55E]'} hover:underline`}
-                                        >
-                                            <i className="ph-fill ph-play text-xs"></i>
-                                            <span>{isCurrent ? 'চলছে' : 'প্লে করুন'}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => navigate('/videos/' + v.slug)}
-                                            className="text-xs font-semibold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                                            title="বিস্তারিত পেজে যান"
-                                        >
-                                            বিস্তারিত →
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            );
-        };
-
-        // ==================================================================
         //  একক ভিডিও প্লেয়ার পেজ (Single Video Page)
         // ==================================================================
         const McVideoPage = ({ slug }) => {
@@ -3306,6 +3179,7 @@
             const v = api.getVideoBySlug(slug) || api.getVideos()[0];
             if (!v) return <McNotFound path={'videos/' + slug} />;
             const others = api.getVideos().filter(x => x.id !== v.id);
+            const [views, setViews] = React.useState(v.views || 0);
 
             return (
                 <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -3327,8 +3201,8 @@
                                 url={v.videoUrl}
                                 poster={v.thumb}
                                 title={v.title}
-                                autoPlay={true}
                                 isReel={v.isReel}
+                                onFirstPlay={() => setViews(mcCountVideoView(v.id))}
                             />
                             
                             <h1 className="mt-4 font-serif text-xl sm:text-2xl font-bold text-gray-900 md:text-3xl dark:text-[#F1F5F9] leading-snug">
@@ -3342,7 +3216,7 @@
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <i className="ph ph-eye text-[#E21D2B]"></i>
-                                    {mcBn((v.views || 0).toLocaleString('bn-BD'))} বার দেখা হয়েছে
+                                    {mcBn(views)} বার দেখা হয়েছে
                                 </span>
                             </div>
 
@@ -3350,9 +3224,6 @@
                                 {v.description}
                             </p>
 
-                            <div className="mt-6">
-                                <McShare title={v.title} />
-                            </div>
                         </div>
 
                         <div className="lg:col-span-4 space-y-6">
@@ -3363,44 +3234,15 @@
                                         সব ভিডিও ({mcBn(api.getVideos().length)}) →
                                     </button>
                                 </h3>
-                                <div className="space-y-3">
+                                <ul className="space-y-2">
                                     {others.map(ov => (
-                                        <div
-                                            key={ov.id}
-                                            onClick={() => navigate('/videos/' + ov.slug)}
-                                            className="group flex cursor-pointer items-start gap-3 rounded-xl p-2 hover:bg-gray-50 dark:hover:bg-[#0D1422] transition-colors"
-                                        >
-                                            <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-black">
-                                                <img
-                                                    src={ov.thumb || PLACEHOLDER_IMG}
-                                                    loading="lazy"
-                                                    decoding="async"
-                                                    onError={imgFallback}
-                                                    alt={ov.title}
-                                                    className="h-full w-full object-cover opacity-85 group-hover:scale-105 transition-transform"
-                                                />
-                                                {ov.duration && (
-                                                    <span className="absolute bottom-1 right-1 rounded bg-black/80 px-1 text-[9px] font-bold text-white">
-                                                        {ov.duration}
-                                                    </span>
-                                                )}
-                                                <span className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#E21D2B]/90 pl-0.5 text-white shadow">
-                                                        <i className="ph-fill ph-play text-xs"></i>
-                                                    </span>
-                                                </span>
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h4 className="font-serif text-xs font-bold leading-snug text-gray-900 line-clamp-2 dark:text-[#F1F5F9] group-hover:text-brand-red transition-colors">
-                                                    {ov.title}
-                                                </h4>
-                                                <span className="mt-1 block text-[10px] text-gray-500 dark:text-[#94A3B8]">
-                                                    <i className="ph ph-clock mr-1"></i>{timeAgo(ov.publishedAt)}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <li key={ov.id}>
+                                            <button type="button" onClick={() => navigate('/videos/' + ov.slug)} className="text-left font-serif text-sm font-bold leading-snug text-gray-800 hover:text-[#E21D2B] dark:text-[#F1F5F9] dark:hover:text-[#22C55E]">
+                                                {ov.title}
+                                            </button>
+                                        </li>
                                     ))}
-                                </div>
+                                </ul>
                             </div>
                         </div>
                     </div>

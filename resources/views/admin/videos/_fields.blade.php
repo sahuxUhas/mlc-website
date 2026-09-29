@@ -4,7 +4,7 @@
     <x-admin.field-input name="title" label="ভিডিওর শিরোনাম" :value="$v->title" required />
     <x-admin.field-input name="slug" label="স্লাগ" :value="$v->slug" hint="খালি রাখলে শিরোনাম থেকে তৈরি হবে" />
     <x-admin.field-input name="video_url" label="ভিডিও URL (ফেসবুক / ইউটিউব)" type="url" :value="$v->video_url" required
-        placeholder="https://www.facebook.com/…/videos/…" hint="Facebook ভিডিও লিংক দিলে প্লেয়ারে এমবেড হবে" />
+        placeholder="https://www.facebook.com/…/videos/…" hint="পাবলিক পেজে এই লিংক দেখায় না। mp4 হলে সরাসরি প্লেয়ার, ফেসবুক/ইউটিউব হলে প্লেয়ারে এমবেড।" />
     <x-admin.field-textarea name="description" label="বিবরণ" :value="$v->description" :rows="3" />
     <div class="grid grid-cols-2 gap-3"><x-admin.field-input name="duration" label="দৈর্ঘ্য" :value="$v->duration" placeholder="12:35" />
         <x-admin.field-select name="status" label="স্ট্যাটাস" :options="\App\Models\Video::STATUSES" :selected="$v->status" required /></div>
